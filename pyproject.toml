@@ -1,0 +1,25 @@
+[project]
+name = "basic-api"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "JsNcAr",email = "jn.arias@uniandes.edu.co"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi (>=0.121.1,<0.122.0)",
+    "bcrypt (>=5.0.0,<6.0.0)",
+    "python-dotenv (>=1.2.1,<2.0.0)",
+    "uvicorn (>=0.38.0,<0.39.0)",
+    "python-jose[cryptography] (>=3.5.0,<4.0.0)",
+    "python-multipart (>=0.0.20,<0.0.21)"
+]
+
+[tool.poetry]
+packages = [{include = "basic_api", from = "src"}]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,53 @@
+# Python/Poetry/FastAPI .gitignore
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+venv/
+.env
+.env
+
+# Poetry
+.poetry/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# Test, coverage, and logs
+.coverage
+htmlcov/
+*.log
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secret files
+.env
+.env.local
+.env.*.local
+
+# Misc
+*.bak
+*.swp
+*.tmp
+
+# Ignore example env file only if you want to keep it out of repo
+# Uncomment if you want to ignore .env.example
+# .env.example
