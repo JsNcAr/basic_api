@@ -3,7 +3,7 @@ from typing import Optional
 from .base import BaseSchema
 from typing import Literal
 
-class UserSchema(BaseSchema):
+class UserSchema(BaseModel):
     username: str = Field(..., description="The unique username of the user")
     email: EmailStr = Field(..., description="The email address of the user")
     phone_number: Optional[str] = Field(None, description="The phone number of the user")
@@ -22,7 +22,7 @@ class UserUpdateSchema(BaseSchema):
     is_active: Optional[bool] = Field(None, description="Indicates whether the user is active")
     password: Optional[str] = Field(None, min_length=8, description="The password for the user account (min 8 chars)")
     
-class UserResponseSchema(UserSchema):
+class UserResponseSchema(UserSchema, BaseSchema):
     pass
     
     
