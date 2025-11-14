@@ -30,7 +30,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from .auth import authenticate_user, create_access_token
 from .dependencies import get_current_user
 
-from .routers import auth
+from .routers import auth, users
 
 # Create FastAPI app
 app = FastAPI(
@@ -147,4 +147,4 @@ async def protected_example(
 # Include implemented routers
 
 app.include_router(auth.router, prefix="/api")
-
+app.include_router(users.router, prefix="/api")
