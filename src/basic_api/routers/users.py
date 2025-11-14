@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from typing import Optional
 from ..schemas.user import UserCreateSchema, UserUpdateSchema, UserLoginSchema
 from ..schemas import SuccessResponse
@@ -10,8 +10,8 @@ router = APIRouter(
     tags=["Users"]
 )
 
-@router.post("/", response_model=SuccessResponse[dict])
-async def create_user(user: UserCreateSchema):
+@router.post("/", response_model=SuccessResponse[dict], status_code=201)
+async def create_user(user: UserCreateSchema = Body(...)):
     """
     Create a new user.
     
