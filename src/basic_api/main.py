@@ -34,10 +34,10 @@ from .routers import auth, users
 
 # Create FastAPI app
 app = FastAPI(
-    title="Leads Frontend API",
-    description="REST API for lead generation pipeline workflows with OAuth2 + JWT authentication",
+    title="Korvyn API",
+    description="REST API for Korvyn application",
     version="0.116.0",
-    root_path="/back"  # For running behind a reverse proxy
+    root_path="/korvyn"  # For running behind a reverse proxy
 )
 
 # Get settings for CORS configuration
