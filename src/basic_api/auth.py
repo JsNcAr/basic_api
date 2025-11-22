@@ -12,6 +12,7 @@ Easy to migrate to database when multiple users are needed.
 
 from datetime import datetime, timedelta
 from typing import Optional
+import hashlib
 
 import bcrypt
 from jose import JWTError, jwt
@@ -34,7 +35,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a plain password against a bcrypt hash.
     
-    Uses bcrypt directly for compatibility with Python 3.13 and bcrypt 5.0.0.
+    Uses SHA-256 pre-hash + bcrypt to support arbitrarily long passwords.
+    This avoids bcrypt's 72-byte limit while maintaining security.
     
     Args:
         plain_password: The plain text password to verify
@@ -43,19 +45,20 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if password matches, False otherwise
     """
-    # Convert strings to bytes
-    password_bytes = plain_password.encode('utf-8')
+    # Hash password with SHA-256 first to handle any length
+    sha256_hash = hashlib.sha256(plain_password.encode('utf-8')).hexdigest()
+    # Then verify with bcrypt (SHA-256 hex output is always 64 chars = 64 bytes)
     hash_bytes = hashed_password.encode('utf-8')
 
-    # Verify using bcrypt directly
-    return bcrypt.checkpw(password_bytes, hash_bytes)
+    return bcrypt.checkpw(sha256_hash.encode('utf-8'), hash_bytes)
 
 
 def get_password_hash(password: str) -> str:
     """
     Hash a password using bcrypt.
     
-    Uses bcrypt directly for compatibility with Python 3.13 and bcrypt 5.0.0.
+    Uses SHA-256 pre-hash + bcrypt to support arbitrarily long passwords.
+    This avoids bcrypt's 72-byte limit while maintaining security.
     
     Args:
         password: Plain text password to hash
@@ -68,12 +71,11 @@ def get_password_hash(password: str) -> str:
         >>> print(hash)
         $2b$12$...
     """
-    # Convert to bytes
-    password_bytes = password.encode('utf-8')
-
-    # Generate salt and hash
+    # Hash password with SHA-256 first to handle any length
+    sha256_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+    # Then hash with bcrypt (SHA-256 hex output is always 64 chars = 64 bytes)
     salt = bcrypt.gensalt(rounds=12)
-    hashed = bcrypt.hashpw(password_bytes, salt)
+    hashed = bcrypt.hashpw(sha256_hash.encode('utf-8'), salt)
 
     # Return as string
     return hashed.decode('utf-8')
