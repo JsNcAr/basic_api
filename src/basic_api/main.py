@@ -34,6 +34,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from .routers import auth, users
 from contextlib import asynccontextmanager
 from .database import init_db
+from .security import verify_api_key
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,7 +47,8 @@ app = FastAPI(
     description="REST API for Korvyn application",
     version="0.116.0",
     root_path="/korvyn",  # For running behind a reverse proxy
-    lifespan=lifespan
+    lifespan=lifespan,
+    dependencies=[Depends(verify_api_key)]
 )
 
 # Get settings for CORS configuration
