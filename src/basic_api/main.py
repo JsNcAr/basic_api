@@ -31,13 +31,21 @@ from .auth import authenticate_user, create_access_token
 from .dependencies import get_current_user
 
 from .routers import auth, users
+from contextlib import asynccontextmanager
+from .database import init_db
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
 
 # Create FastAPI app
 app = FastAPI(
     title="Korvyn API",
     description="REST API for Korvyn application",
     version="0.116.0",
-    root_path="/korvyn"  # For running behind a reverse proxy
+    root_path="/korvyn",  # For running behind a reverse proxy
+    lifespan=lifespan
 )
 
 # Get settings for CORS configuration
