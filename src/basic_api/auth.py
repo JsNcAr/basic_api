@@ -5,9 +5,6 @@ This module provides functions for:
 - Password verification using bcrypt
 - JWT token creation and validation
 - User authentication
-
-For single admin user, credentials are stored in environment variables.
-Easy to migrate to database when multiple users are needed.
 """
 
 from datetime import datetime, timedelta
@@ -19,6 +16,10 @@ from jose import JWTError, jwt
 from fastapi import HTTPException, status
 from dotenv import load_dotenv
 import os
+
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import select
+from .schemas.user import User
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -146,31 +147,33 @@ def decode_access_token(token: str) -> dict:
         )
 
 
-def authenticate_user(username: str, password: str) -> bool:
+
+
+async def authenticate_user(session: AsyncSession, identifier: str, password: str) -> User | bool:
     """
-    Authenticate a user by verifying username and password.
-    
-    For single admin user: validates against credentials in environment variables.
-    For multiple users: this function would query the database instead.
+    Authenticate a user by verifying identifier (username/email/phone) and password.
     
     Args:
-        username: Username to authenticate
+        session: Database session
+        identifier: Username, email, or phone number
         password: Plain text password to verify
         
     Returns:
-        True if authentication successful, False otherwise
+        User object if authentication successful, False otherwise
     """
+    # Try to find user by username, email, or phone number
+    statement = select(User).where(
+        (User.username == identifier) | 
+        (User.email == identifier) | 
+        (User.phone_number == identifier)
+    )
+    result = await session.exec(statement)
+    user = result.first()
 
-    admin_username = os.getenv("ADMIN_USERNAME") or "admin"
-    admin_password_hash = os.getenv("ADMIN_PASSWORD_HASH")
-
-    if not admin_password_hash:
-        raise RuntimeError("ADMIN_PASSWORD_HASH environment variable is required")
-
-    if username != admin_username:
+    if not user:
         return False
 
-    if not verify_password(password, admin_password_hash):
+    if not verify_password(password, user.hashed_password):
         return False
 
-    return True
+    return user

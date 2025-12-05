@@ -28,7 +28,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 
 from .auth import authenticate_user, create_access_token
-from .dependencies import get_current_user
+from .dependencies import get_current_user, get_session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .routers import auth, users
 from contextlib import asynccontextmanager
@@ -81,7 +82,8 @@ async def health_check():
 
 @app.post("/token")
 async def login(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    session: AsyncSession = Depends(get_session)
 ):
     """
     OAuth2 compatible token login endpoint.
@@ -92,6 +94,7 @@ async def login(
     
     Args:
         form_data: OAuth2 password form with username and password fields
+        session: Database session
         
     Returns:
         dict: Access token and token type
@@ -109,7 +112,8 @@ async def login(
              -d "username=admin&password=your-password"
     """
     # Authenticate user
-    if not authenticate_user(form_data.username, form_data.password):
+    user = await authenticate_user(session, form_data.username, form_data.password)
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -117,7 +121,7 @@ async def login(
         )
 
     # Create access token
-    access_token = create_access_token(data={"sub": form_data.username})
+    access_token = create_access_token(data={"sub": user.username})
 
     return {
         "access_token": access_token,
