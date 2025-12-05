@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends, Body
-from typing import Optional
-from ..schemas.user import UserCreateSchema, UserUpdateSchema, UserLoginSchema
+from sqlalchemy.ext.asyncio import AsyncSession
+from ..schemas.user import UserCreateSchema, UserUpdateSchema, UserLoginSchema, User, UserResponseSchema
 from ..schemas import SuccessResponse
-from ..dependencies import get_current_user
+from ..dependencies import get_current_user, get_session
+from ..auth import get_password_hash
 
 
 router = APIRouter(
@@ -10,30 +11,42 @@ router = APIRouter(
     tags=["Users"]
 )
 
-@router.post("/", response_model=SuccessResponse[dict], status_code=201)
-async def create_user(user: UserCreateSchema = Body(...)):
+@router.post("/", response_model=SuccessResponse[UserResponseSchema], status_code=201)
+async def create_user(
+    user_create: UserCreateSchema = Body(...),
+    session: AsyncSession = Depends(get_session)
+):
     """
     Create a new user.
     
     Args:
-        user: UserCreateSchema containing user details
+        user_create: UserCreateSchema containing user details
+        session: Database session
         
     Returns:
-        SuccessResponse[dict]: Created user information
+        SuccessResponse[UserResponseSchema]: Created user information
     """
-    # Placeholder implementation
-    created_user = {
-        "username": user.username,
-        "email": user.email,
-        "phone_number": user.phone_number,
-        "profile_picture_url": user.profile_picture_url,
-        "is_active": True,
-        "bluetooth_address": user.bluetooth_address,
-        "wifi_mac_address": user.wifi_mac_address
-    }
+    # Hash the password
+    hashed_password = get_password_hash(user_create.password)
+    
+    # Create DB user instance
+    # Exclude 'password' from the input data as it's not in the User table
+    user_data = user_create.model_dump(exclude={"password"})
+    db_user = User(**user_data, hashed_password=hashed_password)
+    
+    try:
+        session.add(db_user)
+        await session.commit()
+        await session.refresh(db_user)
+    except Exception as e:
+        await session.rollback()
+        # Handle unique constraint violations (e.g. username/email already exists)
+        # For now, just raise a generic 400
+        raise HTTPException(status_code=400, detail=str(e))
+
     return SuccessResponse(
         success=True,
         message="User created successfully",
-        data=created_user
+        data=db_user
     )
     
