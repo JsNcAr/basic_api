@@ -77,13 +77,4 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Verify username matches admin (for single-user mode)
-    # When migrating to multi-user, this check can be removed
-    if username != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid user",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
     return username
