@@ -8,7 +8,7 @@ class UserBase(SQLModel):
     username: Optional[str] = Field(default=None, index=True, description="The unique username of the user")
     email: Optional[EmailStr] = Field(default=None, index=True, description="The email address of the user")
     phone_number: Optional[str] = Field(default=None, index=True, description="The phone number of the user")
-    profile_picture_url: Optional[HttpUrl] = Field(default=None, description="URL to the user's profile picture")
+    profile_picture_url: Optional[str] = Field(default=None, description="URL to the user's profile picture")
     is_active: bool = Field(default=True, description="Indicates whether the user is active")
     bluetooth_address: Optional[str] = Field(default=None, description="The Bluetooth address of the user")
     wifi_mac_address: Optional[str] = Field(default=None, description="The WiFi MAC address of the user")
