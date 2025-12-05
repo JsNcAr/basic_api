@@ -12,7 +12,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .auth import decode_access_token
 from .database import get_session
