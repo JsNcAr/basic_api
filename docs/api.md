@@ -4,7 +4,15 @@ This document outlines the available API endpoints.
 
 ## Base URL
 
-The API is served at the root path defined in the application (default: `/korvyn` or `/back` depending on configuration, check `main.py` and `README.md`). Based on `main.py`, the `root_path` is set to `/korvyn`. However, the README mentions `/back`. Please verify your deployment configuration.
+The API is served from the server root — `http://localhost:8000` in development.
+
+Top-level routes (`/`, `/health`, `/token`, `/protected-example`) are declared on
+the application itself. Router endpoints are mounted under `/api`, so the auth
+and user routes below are reached at `/api/auth/...` and `/api/users/...`.
+
+If you deploy behind a reverse proxy that serves the app under a subpath, set
+`root_path` on the `FastAPI()` call in `main.py`, or pass
+`uvicorn --root-path /your-prefix`, and prepend that prefix to every path here.
 
 ## Authentication Endpoints
 
@@ -23,7 +31,7 @@ The API is served at the root path defined in the application (default: `/korvyn
 -   **Response**: `SuccessResponse[None]`
 
 ### Get Token
--   **URL**: `/token` (or `/back/token` as per README)
+-   **URL**: `/token`
 -   **Method**: `POST`
 -   **Description**: Obtains an access token using username and password.
 -   **Body**: `OAuth2PasswordRequestForm` (username, password)
@@ -40,13 +48,13 @@ The API is served at the root path defined in the application (default: `/korvyn
 
 ## Health Check
 
--   **URL**: `/health` (or `/back/health`)
+-   **URL**: `/health`
 -   **Method**: `GET`
 -   **Description**: Checks the health status of the API.
 
 ## Protected Example
 
--   **URL**: `/protected-example` (or `/back/protected-example`)
+-   **URL**: `/protected-example`
 -   **Method**: `GET`
 -   **Description**: An example endpoint requiring authentication.
 -   **Headers**: `Authorization: Bearer <token>`

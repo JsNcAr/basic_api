@@ -1,24 +1,20 @@
 """
 FastAPI application main entry point.
 
-This is a basic FastAPI application structure for the leads_frontend pipeline.
-The app provides REST API endpoints for the 4 main workflows:
-- Refresh: Compute metrics and update controller status
-- Retrieve: Search Apollo API for leads
-- Enrich: Enrich people with email data and AI scripts
-- Campaign: Add prospects to Snov campaigns
+A basic FastAPI application structure providing OAuth2 + JWT authentication
+over an async PostgreSQL backend, intended as a starting point for new APIs.
 
 Authentication:
-    OAuth2 + JWT authentication with single admin user.
-    Get token: POST /token with username and password
-    Use token: Include "Authorization: Bearer <token>" header in requests
+    OAuth2 password flow with JWT bearer tokens.
+    Get a token: POST /token with an identifier, its type, and a password.
+    Use the token: send "Authorization: Bearer <token>" on subsequent requests.
 
 Usage:
     Development:
-        uvicorn leads_frontend.api.main:app --reload
-    
+        uvicorn basic_api.main:app --reload --app-dir src
+
     Production:
-        uvicorn leads_frontend.api.main:app --host 0.0.0.0 --port 8000
+        uvicorn basic_api.main:app --host 0.0.0.0 --port 8000 --app-dir src
 """
 
 from typing import Annotated
@@ -43,10 +39,11 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="Korvyn API",
-    description="REST API for Korvyn application",
+    title="Basic API",
+    description="REST API starter with OAuth2 + JWT",
     version="0.116.0",
-    root_path="/korvyn",  # For running behind a reverse proxy
+    # If deploying behind a reverse proxy under a subpath, pass
+    # root_path="/your-prefix" here or via `uvicorn --root-path`.
     lifespan=lifespan,
     dependencies=[Depends(verify_api_key)]
 )
@@ -66,7 +63,7 @@ app.add_middleware(
 async def root():
     """Root endpoint - API health check."""
     return {
-        "message": "Korvyn",
+        "message": "Basic API",
         "version": "0.1.0",
         "status": "healthy",
         "authentication": "OAuth2 + JWT (POST /token to get access token)"
