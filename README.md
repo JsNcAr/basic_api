@@ -166,5 +166,4 @@ poetry add "python-jose[cryptography]"
 
 ## License
 
-MIT. Note that no `LICENSE` file is committed yet — add one to make this
-machine-readable to GitHub and to dependency tooling.
+MIT — see [`LICENSE`](LICENSE).
