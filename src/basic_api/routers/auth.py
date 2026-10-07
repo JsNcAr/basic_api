@@ -13,15 +13,12 @@ from ..dependencies import get_current_user
 from ..schemas import SuccessResponse
 
 # Create router
-router = APIRouter(
-    prefix="/auth",
-    tags=["Authentication"]
-)
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.get("/me", response_model=SuccessResponse[dict])
 async def get_current_user_info(
-    current_user: Annotated[str, Depends(get_current_user)]
+    current_user: Annotated[str, Depends(get_current_user)],
 ):
     """
     Get current authenticated user information.
@@ -55,15 +52,13 @@ async def get_current_user_info(
             "username": current_user,
             # Placeholder - extend with real user data
             "email": f"{current_user}@example.com",
-            "role": "admin"  # Placeholder - extend with real role management
-        }
+            "role": "admin",  # Placeholder - extend with real role management
+        },
     )
 
 
 @router.post("/logout", response_model=SuccessResponse[None])
-async def logout(
-    current_user: Annotated[str, Depends(get_current_user)]
-):
+async def logout(current_user: Annotated[str, Depends(get_current_user)]):
     """
     Logout endpoint (client-side token deletion).
     
@@ -97,5 +92,5 @@ async def logout(
     return SuccessResponse(
         success=True,
         message="Logout successful. Please delete your token client-side.",
-        data=None
+        data=None,
     )

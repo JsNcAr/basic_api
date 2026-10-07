@@ -32,10 +32,12 @@ from contextlib import asynccontextmanager
 from .database import init_db
 from .security import verify_api_key
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     yield
+
 
 # Create FastAPI app
 app = FastAPI(
@@ -45,7 +47,7 @@ app = FastAPI(
     # If deploying behind a reverse proxy under a subpath, pass
     # root_path="/your-prefix" here or via `uvicorn --root-path`.
     lifespan=lifespan,
-    dependencies=[Depends(verify_api_key)]
+    dependencies=[Depends(verify_api_key)],
 )
 
 # Get settings for CORS configuration
@@ -66,23 +68,20 @@ async def root():
         "message": "Basic API",
         "version": "0.1.0",
         "status": "healthy",
-        "authentication": "OAuth2 + JWT (POST /token to get access token)"
+        "authentication": "OAuth2 + JWT (POST /token to get access token)",
     }
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint for monitoring."""
-    return {
-        "status": "healthy",
-        "service": "leads-frontend-api"
-    }
+    return {"status": "healthy", "service": "leads-frontend-api"}
 
 
 @app.post("/token")
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
 ):
     """
     OAuth2 compatible token login endpoint.
@@ -122,16 +121,11 @@ async def login(
     # Create access token
     access_token = create_access_token(data={"sub": user.username})
 
-    return {
-        "access_token": access_token,
-        "token_type": "bearer"
-    }
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @app.get("/protected-example")
-async def protected_example(
-    current_user: Annotated[str, Depends(get_current_user)]
-):
+async def protected_example(current_user: Annotated[str, Depends(get_current_user)]):
     """
     Example of a protected endpoint that requires authentication.
     
@@ -150,9 +144,8 @@ async def protected_example(
     """
     return {
         "message": f"Hello {current_user}! This is a protected endpoint.",
-        "user": current_user
+        "user": current_user,
     }
-
 
 
 # Include implemented routers
