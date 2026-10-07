@@ -1,7 +1,7 @@
 [project]
 name = "basic-api"
 version = "0.1.0"
-description = ""
+description = "FastAPI starter: OAuth2 + JWT auth, async PostgreSQL, client API key, rate limits, tests and CI"
 authors = [
     {name = "JsNcAr",email = "jn.arias@uniandes.edu.co"}
 ]
