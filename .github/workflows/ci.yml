@@ -13,7 +13,7 @@
 #   mismatch fails `poetry install` with "pyproject.toml changed significantly".
 # - Python is read from .python-version, the file pyenv and uv also honour.
 #   requires-python alone would not do: it is an open range, and setup-python
-#   resolved it to the newest interpreter (3.14) rather than the 3.13 the
+#   would resolve it to whatever interpreter is newest rather than the minor the
 #   project targets in [tool.black] and [tool.mypy].
 name: CI
 

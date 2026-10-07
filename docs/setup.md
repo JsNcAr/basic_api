@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.13 (`.python-version` pins it for pyenv, uv and CI)
+- Python 3.14 (`.python-version` pins the minor for pyenv, uv and CI; the newest patch release is used)
 - [Poetry](https://python-poetry.org/) 2.x
 - PostgreSQL (any supported version; CI tests against 17)
 
