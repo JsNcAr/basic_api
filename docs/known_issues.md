@@ -18,7 +18,7 @@ looks like. Remove an entry in the same change that fixes it.
 | Data | [Schema is created at startup, not migrated](#schema-is-created-at-startup-not-migrated) | High |
 | Operations | [Rate limits are per IP and per process](#rate-limits-are-per-ip-and-per-process) | Low |
 | Operations | [No logging configuration or observability](#no-logging-configuration-or-observability) | Medium |
-| Operations | [CI has no coverage, dependency audit or secret scan](#ci-has-no-coverage-dependency-audit-or-secret-scan) | Low |
+| Operations | [CI has no coverage or secret scan](#ci-has-no-coverage-or-secret-scan) | Low |
 | Operations | [No deployment story](#no-deployment-story) | Low |
 | Code | [The demo route ships](#the-demo-route-ships) | Low |
 | Code | [The OpenAPI document under-describes responses](#the-openapi-document-under-describes-responses) | Medium |
@@ -167,16 +167,16 @@ no metrics, no error tracking.
 **Fix:** configure logging at startup (JSON in production), a request-id
 middleware, and an error tracker.
 
-### CI has no coverage, dependency audit or secret scan
+### CI has no coverage or secret scan
 
 **Where:** `.github/workflows/ci.yml`.
 
-The pipeline formats, lints, type-checks and tests. It does not measure
-coverage, check dependencies against known vulnerabilities, or scan for
-committed secrets.
+The pipeline formats, lints, type-checks, audits dependencies (`pip-audit`)
+and tests, and Dependabot proposes updates. It does not measure coverage and
+does not scan for committed secrets.
 
-**Fix:** `pip-audit` and a secret scanner in `lint`; `pytest-cov` with a
-threshold in `test`; Dependabot or Renovate for updates.
+**Fix:** a secret scanner in `lint` (gitleaks or GitHub's secret scanning for
+the repository) and `pytest-cov` with a threshold in `test`.
 
 ### No deployment story
 

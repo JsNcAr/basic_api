@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
 
 ## [Unreleased]
 
+### Added
+- `pip-audit` in the dev group and in the CI `lint` job, so a published
+  vulnerability in any installed dependency fails a pull request; Dependabot
+  configuration for weekly, grouped dependency and GitHub Actions updates (#9).
+
+### Security
+- JWTs are signed and verified with PyJWT 2.15 instead of python-jose 3.5.
+  `pip-audit` reported python-jose with an unfixed algorithm-confusion
+  advisory (CVE-2026-85394; this API already restricted algorithms and was not
+  exposed) and its dependency ecdsa with an unfixed timing attack
+  (PYSEC-2026-1325; ECDSA signing is not used). python-jose's last release was
+  May 2025. The swap also removes cryptography, ecdsa, rsa, pyasn1, cffi and
+  pycparser from the dependency tree; HS256 needs none of them (#9).
+
 ### Dependencies
 - Every dependency moved to its current release and the ranges in
   `pyproject.toml` opened to the next major (`poetry.lock` is the pin):
