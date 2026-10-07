@@ -7,13 +7,15 @@ from datetime import datetime, timezone
 
 def utc_now() -> datetime:
     """
-    Return the current UTC time as a naive datetime.
+    Return the current time as an aware UTC datetime.
 
-    The columns are TIMESTAMP WITHOUT TIME ZONE, which asyncpg will only accept
-    naive values for, and datetime.utcnow() is deprecated since Python 3.12.
-    Every timestamp the app stores or compares goes through this function.
+    SQLModel (since 0.0.45) maps `datetime` fields to UTCDateTime, a
+    TIMESTAMP WITH TIME ZONE column that refuses naive values at bind time and
+    returns aware UTC values on read. Every timestamp the app stores, compares
+    or puts in a token goes through this function, so there is one convention:
+    aware, UTC. Responses carry the zone ("...Z") for the same reason.
 
     Returns:
-        The current UTC time with tzinfo set to None.
+        The current time with tzinfo set to timezone.utc.
     """
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(timezone.utc)

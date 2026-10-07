@@ -45,5 +45,8 @@ docs/              # setup, authentication, api, schemas, known_issues
   test files runs without one)
 * **Format & lint**: `poetry run black src tests && poetry run flake8 src tests`
 * **Type check**: `poetry run mypy`
-* **Dependencies**: `poetry add <pkg>` (dev tools: `--group dev`), then `poetry install`
+* **Dependencies**: `poetry add <pkg>` (dev tools: `--group dev`), then `poetry install`.
+  Ranges in `pyproject.toml` are open to the next major; `poetry.lock` is the pin.
+  Update with `poetry update` (or `poetry lock --regenerate` for every transitive
+  package) and run the suite. SQLAlchemy is held below 2.1 until it ships wheels.
 * **Test database**: `createdb basic_api_test_db` and the `DB_*` variables
