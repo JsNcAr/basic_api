@@ -13,11 +13,21 @@ looks like. Remove an entry in the same change that fixes it.
 | Security | [Identifiers are not normalised or verified](#identifiers-are-not-normalised-or-verified) | Medium |
 | Security | [The API key is a client identifier, not a security layer](#the-api-key-is-a-client-identifier-not-a-security-layer) | Low |
 | Security | [CORS allows every origin by default](#cors-allows-every-origin-by-default) | Low |
+| Security | [Login identifiers can collide across columns](#login-identifiers-can-collide-across-columns) | Medium |
+| Security | [Password policy is length only](#password-policy-is-length-only) | Low |
+| Dependencies | [cryptography has published vulnerabilities](#cryptography-has-published-vulnerabilities) | High |
+| Dependencies | [Top-level dependencies are pinned to stale minors](#top-level-dependencies-are-pinned-to-stale-minors) | Medium |
 | Data | [Schema is created at startup, not migrated](#schema-is-created-at-startup-not-migrated) | High |
 | Operations | [Rate limits are per IP and per process](#rate-limits-are-per-ip-and-per-process) | Low |
 | Operations | [No logging configuration or observability](#no-logging-configuration-or-observability) | Medium |
 | Operations | [CI has no coverage, dependency audit or secret scan](#ci-has-no-coverage-dependency-audit-or-secret-scan) | Low |
+| Operations | [No deployment story](#no-deployment-story) | Low |
 | Code | [The demo route ships](#the-demo-route-ships) | Low |
+| Code | [The OpenAPI document under-describes responses](#the-openapi-document-under-describes-responses) | Medium |
+| Code | [Startup validation and the login limit are untested](#startup-validation-and-the-login-limit-are-untested) | Low |
+| Code | [Application code detects the test runner](#application-code-detects-the-test-runner) | Low |
+| Code | [Timestamps are serialised without a timezone](#timestamps-are-serialised-without-a-timezone) | Low |
+| Code | [The root banner reports healthy without checking](#the-root-banner-reports-healthy-without-checking) | Low |
 
 ---
 
@@ -88,6 +98,67 @@ visitor's credentials.
 **Fix:** set `CORS_ORIGINS` to the frontend's origins in every deployment that
 has one.
 
+### Login identifiers can collide across columns
+
+**Where:** `src/basic_api/auth.py` (`authenticate_user`), `src/basic_api/schemas/user.py` (`UserBase.username`).
+
+Login matches the submitted identifier against `username`, `email` and
+`phone_number` together and takes `.first()`. Each column is unique on its own,
+but nothing stops one account's username from equalling another account's email
+or phone number: `username` has no format rule. When two rows match, the
+database picks one, and the other owner cannot log in with that identifier.
+
+**Fix:** forbid usernames that look like an email address or a phone number
+(a pattern on `username`), and check a new email or phone against the
+`username` column too. Alternatively let the client say which kind of
+identifier it sends.
+
+### Password policy is length only
+
+**Where:** `src/basic_api/schemas/user.py` (`UserCreateSchema.password`, `PasswordChangeSchema.new_password`).
+
+Eight characters is the only rule. No maximum (harmless thanks to the SHA-256
+pre-hash, but unbounded input nonetheless), no check against lists of breached
+passwords, no rejection of the username or email as the password.
+
+**Fix:** a maximum length, a breached-password check (the k-anonymity range API
+of Have I Been Pwned, or a local list), and refusing passwords equal to the
+account's identifiers.
+
+---
+
+## Dependencies
+
+### cryptography has published vulnerabilities
+
+**Where:** `poetry.lock` (`cryptography 46.0.3`, pulled in by `python-jose[cryptography]`).
+
+`pip-audit` on the installed environment (2026-10-07) reports seven advisories
+against 46.0.3: `GHSA-537c-gmf6-5ccf`, `PYSEC-2026-35`, `PYSEC-2026-36`,
+`PYSEC-2026-2141`, `PYSEC-2026-3552`, `PYSEC-2026-3553`, `PYSEC-2026-3554`,
+fixed between 46.0.5 and 50.0.0. `poetry update cryptography --dry-run`
+resolves to 50.0.2 within the current constraints, so the fix is a lock-file
+change. The same version is pinned in KorvynApi.
+
+**Fix:** `poetry update cryptography`, commit the lock, and add `pip-audit` to
+the CI `lint` job so the next advisory fails a pull request instead of waiting
+to be noticed (see [CI has no coverage, dependency audit or secret scan](#ci-has-no-coverage-dependency-audit-or-secret-scan)).
+
+### Top-level dependencies are pinned to stale minors
+
+**Where:** `pyproject.toml` (`[project.dependencies]`).
+
+The ranges lock each package to the minor it was added at, for example
+`fastapi (>=0.121.1,<0.122.0)`, so `poetry update` cannot move them. On
+2026-10-07 the gaps were: fastapi 0.121.1 against 0.142.2, sqlmodel 0.0.27
+against 0.0.48, uvicorn 0.38.0 against 0.54.0, pydantic 2.12.4 against 2.13.5,
+asyncpg 0.31.0 against 0.32.0, python-multipart 0.0.20 against 0.0.32,
+python-dotenv 1.2.1 against 1.2.4. Each minor carries fixes the project never
+receives.
+
+**Fix:** bump the ranges deliberately, one package at a time with the suite as
+the check, and let Dependabot or Renovate open the next ones.
+
 ---
 
 ## Data
@@ -143,6 +214,21 @@ committed secrets.
 **Fix:** `pip-audit` and a secret scanner in `lint`; `pytest-cov` with a
 threshold in `test`; Dependabot or Renovate for updates.
 
+### No deployment story
+
+**Where:** repository root, `docs/`.
+
+The README calls the project production-shaped, but nothing says how to run it
+in production: no container image, no service unit, no reverse-proxy example,
+no request body size limit, no security headers, no HTTPS note. uvicorn alone
+caps none of these. The documentation left deployment out of scope on purpose;
+this entry records that so the claim and the contents agree.
+
+**Fix:** a short deployment guide with a reverse proxy that terminates TLS,
+sets security headers and caps request bodies, a process manager, and the
+`ROOT_PATH` and forwarded-headers settings; a Dockerfile if the project will be
+containerised.
+
 ---
 
 ## Code
@@ -155,3 +241,67 @@ threshold in `test`; Dependabot or Renovate for updates.
 live in every deployment of the starter.
 
 **Fix:** delete it once a real protected route exists to point at.
+
+### The OpenAPI document under-describes responses
+
+**Where:** every route in `src/basic_api/main.py` and `src/basic_api/routers/`.
+
+No route declares `responses=`, so the generated document lists only `200`,
+`201` and `422`; the `401`, `403`, `409`, `429` and `503` paths described in
+`docs/api.md` are absent from the spec and from any client generated from it.
+`/token`, `/` and `/health` have no `response_model`, so the token response has
+no schema at all.
+
+**Fix:** a shared `responses` dictionary per auth level (API key only, API key
+plus token) passed to the decorators, and small response models for the three
+plain routes.
+
+### Startup validation and the login limit are untested
+
+**Where:** `src/basic_api/config.py`, `src/basic_api/limiter.py`, `tests/`.
+
+The checks that refuse to start (required variables, secret length, algorithm
+allow-list, bcrypt minimum, rate-limit syntax) run at import, and no test
+exercises any of them. `RATE_LIMIT_LOGIN` is applied but only the registration
+limit has a test.
+
+**Fix:** move the checks into a `load_settings()` function that the module
+calls once, and test the function; add a login-limit test alongside the
+registration one.
+
+### Application code detects the test runner
+
+**Where:** `src/basic_api/config.py` (`TESTING`), `src/basic_api/database.py`.
+
+`config.py` checks for `pytest` in `sys.modules` to build the database URL from
+the `DB_*` variables and to disable connection pooling. It works, and the
+reason for the pool change is real (each test owns an event loop), but
+production code branching on the test runner is a smell: a future change can be
+reached only by one of the two paths.
+
+**Fix:** have the tests set `DATABASE_URL` explicitly and introduce a
+`DATABASE_POOL` setting (`default` or `none`) that the fixtures set, so the
+application reads configuration only.
+
+### Timestamps are serialised without a timezone
+
+**Where:** `src/basic_api/utils.py` (`utc_now`), `src/basic_api/schemas/user.py` (`created_at`, `updated_at`).
+
+The columns are `TIMESTAMP WITHOUT TIME ZONE` and the values are naive UTC, so
+responses carry `"2026-10-07T16:44:49.065138"` with no offset. A client that
+parses it as local time is off by its UTC offset.
+
+**Fix:** attach `timezone.utc` on the way out (a field serializer on the
+response schema) so the JSON ends in `Z` or `+00:00`, or make the columns
+`timestamptz` and store aware values throughout.
+
+### The root banner reports healthy without checking
+
+**Where:** `src/basic_api/main.py` (`root`).
+
+`GET /` returns `"status": "healthy"` as a literal, while `/health` now checks
+the database and can answer `503`. A monitor pointed at `/` by mistake sees a
+healthy service with its database down.
+
+**Fix:** drop the `status` field from the banner, or have it call the same
+`ping()` as `/health`.
