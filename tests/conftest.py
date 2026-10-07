@@ -2,6 +2,11 @@
 Test fixtures. Database tests run against a throwaway PostgreSQL database built
 from DB_* and TEST_DB_NAME (see docs/setup.md); tests that need none import the
 code directly and can run with `pytest --noconftest`.
+
+Adapting this starter: the four `from basic_api ...` imports below are the only
+project-specific lines; rename them with the package. The DB_* defaults are for
+a developer's own PostgreSQL and are overridden by the environment in CI
+(.github/workflows/ci.yml), so they need no change.
 """
 
 import asyncio

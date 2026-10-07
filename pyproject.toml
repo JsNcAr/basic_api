@@ -40,10 +40,12 @@ dev = [
 
 [tool.black]
 line-length = 88
+# Keep in step with requires-python above.
 target-version = ["py313"]
 
 # `poetry run mypy src`; CI runs it in the lint job.
 [tool.mypy]
+# Keep python_version in step with requires-python; files follows the src/ layout.
 python_version = "3.13"
 files = ["src"]
 plugins = ["pydantic.mypy"]
