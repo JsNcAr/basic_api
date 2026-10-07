@@ -97,16 +97,36 @@ class UserCreateSchema(UserBase):
     )
 
 
-# 4. Profile update input (an endpoint for it arrives with user self-service).
+# 4. Profile update input for PATCH /users/me. Only profile fields: the username
+#    is the login identifier, is_active is an administrative state a user must
+#    not be able to flip (a self-disabled account could never re-enable itself),
+#    and the password has its own route with its own confirmation.
 class UserUpdateSchema(SQLModel):
-    email: Optional[EmailStr] = Field(default=None, max_length=EMAIL_MAX_LENGTH)
-    phone_number: Optional[str] = Field(
-        default=None, max_length=PHONE_NUMBER_MAX_LENGTH
+    email: Optional[EmailStr] = Field(
+        default=None, max_length=EMAIL_MAX_LENGTH, description="Email address"
     )
-    profile_picture_url: Optional[HttpUrl] = Field(default=None)
+    phone_number: Optional[str] = Field(
+        default=None, max_length=PHONE_NUMBER_MAX_LENGTH, description="Phone number"
+    )
+    profile_picture_url: Optional[HttpUrl] = Field(
+        default=None, description="http(s) URL of the profile picture"
+    )
 
 
-# 5. User as returned by the API: never the hash.
+# 5. Password change input for POST /users/me/change-password.
+class PasswordChangeSchema(SQLModel):
+    current_password: str = Field(..., description="The account's current password")
+    new_password: str = Field(
+        ..., min_length=8, description="The new password, at least 8 characters"
+    )
+
+
+# 6. Account deletion input for DELETE /users/me.
+class UserDeleteSchema(SQLModel):
+    password: str = Field(..., description="The account's current password")
+
+
+# 7. User as returned by the API: never the hash.
 class UserResponseSchema(UserBase):
     id: int
     created_at: datetime

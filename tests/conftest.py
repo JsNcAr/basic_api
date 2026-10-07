@@ -115,6 +115,22 @@ async def test_user(session: AsyncSession) -> User:
 
 
 @pytest.fixture
+async def second_user(session: AsyncSession) -> User:
+    """Another account, for identifier collisions."""
+    user = User(
+        username="seconduser",
+        email="second@example.com",
+        phone_number="+15550102",
+        hashed_password=get_password_hash("password456"),
+        is_active=True,
+    )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+@pytest.fixture
 def auth_headers(test_user: User) -> dict:
     # The subject is the user id, never the username (see dependencies.py).
     token = create_access_token(data={"sub": str(test_user.id)})
