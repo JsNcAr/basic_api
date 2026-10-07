@@ -57,3 +57,21 @@ def test_a_profile_picture_url_that_is_not_http_is_refused(bad):
 def test_a_short_password_is_refused():
     with pytest.raises(ValidationError):
         create(password="short")
+
+
+def test_password_change_needs_eight_characters_and_both_fields():
+    from basic_api.schemas.user import PasswordChangeSchema
+
+    assert PasswordChangeSchema(current_password="x", new_password="12345678")
+    with pytest.raises(ValidationError):
+        PasswordChangeSchema(current_password="x", new_password="short")
+    with pytest.raises(ValidationError):
+        PasswordChangeSchema(new_password="12345678")
+
+
+def test_account_deletion_needs_the_password():
+    from basic_api.schemas.user import UserDeleteSchema
+
+    assert UserDeleteSchema(password="x").password == "x"
+    with pytest.raises(ValidationError):
+        UserDeleteSchema()
