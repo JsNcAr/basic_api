@@ -1,9 +1,16 @@
-from fastapi import APIRouter, HTTPException, Depends, Body
+import logging
+
+from fastapi import APIRouter, Body, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from ..schemas.user import UserCreateSchema, User, UserResponseSchema
-from ..schemas import SuccessResponse
+
+from ..auth import get_password_hash_async
 from ..database import get_session
-from ..auth import get_password_hash
+from ..schemas import SuccessResponse
+from ..schemas.user import User, UserCreateSchema, UserResponseSchema
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -14,32 +21,48 @@ async def create_user(
     session: AsyncSession = Depends(get_session),
 ):
     """
-    Create a new user.
+    Register a user.
 
-    Args:
-        user_create: UserCreateSchema containing user details
-        session: Database session
-
-    Returns:
-        SuccessResponse[UserResponseSchema]: Created user information
+    Raises:
+        409 naming the field that is already taken (username, email or phone);
+        a 409 with a generic message if two registrations race past the checks
+        and the database's unique constraint decides; 500, logged, for anything
+        else. The response never carries the database's error text.
     """
-    # Hash the password
-    hashed_password = get_password_hash(user_create.password)
+    taken = (
+        (User.username, user_create.username, "Username is already taken"),
+        (User.email, user_create.email, "Email address is already registered"),
+        (
+            User.phone_number,
+            user_create.phone_number,
+            "Phone number is already associated with an account",
+        ),
+    )
+    for column, value, message in taken:
+        if value is None:
+            continue
+        existing = await session.exec(select(User).where(col(column) == value))
+        if existing.first():
+            raise HTTPException(status_code=409, detail=message)
 
-    # Create DB user instance
-    # Exclude 'password' from the input data as it's not in the User table
-    user_data = user_create.model_dump(exclude={"password"})
-    db_user = User(**user_data, hashed_password=hashed_password)
-
+    hashed_password = await get_password_hash_async(user_create.password)
+    db_user = User(
+        **user_create.model_dump(exclude={"password"}), hashed_password=hashed_password
+    )
     try:
         session.add(db_user)
         await session.commit()
         await session.refresh(db_user)
-    except Exception as e:
+    except IntegrityError:
         await session.rollback()
-        # Handle unique constraint violations (e.g. username/email already exists)
-        # For now, just raise a generic 400
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=409,
+            detail="A user with this username, email, or phone number already exists",
+        )
+    except Exception:
+        await session.rollback()
+        logger.exception("Failed to create user")
+        raise HTTPException(status_code=500, detail="Failed to create user")
 
     return SuccessResponse(
         success=True, message="User created successfully", data=db_user

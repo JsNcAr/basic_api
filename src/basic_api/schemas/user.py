@@ -1,97 +1,104 @@
-from typing import Optional, Literal
 from datetime import datetime
-from sqlmodel import SQLModel, Field
-from pydantic import EmailStr, HttpUrl, model_validator
+from typing import Optional
+
+from pydantic import EmailStr, HttpUrl, TypeAdapter, ValidationError, field_validator
+from sqlmodel import Field, SQLModel
+
+from ..utils import utc_now
+
+# Upper bounds on the free-text identity fields. Without them the columns are
+# unlimited VARCHAR and a client can store megabytes per field. An email address
+# is at most 254 characters (RFC 5321); the URL bound is pydantic's HttpUrl's.
+USERNAME_MAX_LENGTH = 64
+EMAIL_MAX_LENGTH = 254
+PHONE_NUMBER_MAX_LENGTH = 32
+URL_MAX_LENGTH = 2083
+
+_HTTP_URL = TypeAdapter(HttpUrl)
 
 
-# 1. Base Model: Shared fields for both DB and API
+def validate_http_url(value: Optional[str]) -> Optional[str]:
+    """
+    An http(s) URL as a string, or null.
+
+    Applied at registration so that a javascript: or data: URL cannot be stored
+    and later rendered as a link by a web client.
+    """
+    if value is None:
+        return None
+    try:
+        return str(_HTTP_URL.validate_python(value))
+    except ValidationError:
+        raise ValueError("profile_picture_url must be an http(s) URL")
+
+
+# 1. Base model: fields shared by the table and the API schemas.
 class UserBase(SQLModel):
-    username: Optional[str] = Field(
-        default=None, index=True, description="The unique username of the user"
+    # Required and unique: it is what the user logs in with by default. Tokens
+    # carry the user id, never this, so it can be changed later.
+    username: str = Field(
+        index=True,
+        unique=True,
+        max_length=USERNAME_MAX_LENGTH,
+        description="Unique username",
     )
     email: Optional[EmailStr] = Field(
-        default=None, index=True, description="The email address of the user"
+        default=None,
+        index=True,
+        unique=True,
+        max_length=EMAIL_MAX_LENGTH,
+        description="Email address; also accepted as the login identifier",
     )
     phone_number: Optional[str] = Field(
-        default=None, index=True, description="The phone number of the user"
+        default=None,
+        index=True,
+        unique=True,
+        max_length=PHONE_NUMBER_MAX_LENGTH,
+        description="Phone number; also accepted as the login identifier",
     )
     profile_picture_url: Optional[str] = Field(
-        default=None, description="URL to the user's profile picture"
+        default=None,
+        max_length=URL_MAX_LENGTH,
+        description="http(s) URL of the profile picture",
     )
     is_active: bool = Field(
-        default=True, description="Indicates whether the user is active"
-    )
-    bluetooth_address: Optional[str] = Field(
-        default=None, description="The Bluetooth address of the user"
-    )
-    wifi_mac_address: Optional[str] = Field(
-        default=None, description="The WiFi MAC address of the user"
+        default=True,
+        description="A disabled account cannot log in or use its tokens",
     )
 
 
-# 2. Table Model: The actual Database Table
+# 2. Table model.
 class User(UserBase, table=True):
     __tablename__ = "users"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    hashed_password: str = Field(description="Hashed password stored in DB")
-
-    # Timestamps
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    hashed_password: str = Field(description="bcrypt hash of the SHA-256 pre-hash")
+    created_at: datetime = Field(default_factory=utc_now)
     updated_at: Optional[datetime] = Field(
-        default=None, sa_column_kwargs={"onupdate": datetime.utcnow}
+        default=None, sa_column_kwargs={"onupdate": utc_now}
     )
-    is_deleted: bool = Field(default=False)
 
 
-# 3. Create Schema: Input for creating a user
+# 3. Registration input.
 class UserCreateSchema(UserBase):
-    password: str = Field(
-        ..., min_length=8, description="The password for the user account (min 8 chars)"
+    password: str = Field(..., min_length=8, description="At least 8 characters")
+
+    _check_profile_picture_url = field_validator("profile_picture_url")(
+        validate_http_url
     )
 
-    @model_validator(mode="after")
-    def check_identifiers(cls, values):
-        if not (values.username or values.email or values.phone_number):
-            raise ValueError(
-                "At least one of username, email, or phone_number must be provided."
-            )
-        return values
 
-
-# 4. Update Schema: Input for updating a user
+# 4. Profile update input (an endpoint for it arrives with user self-service).
 class UserUpdateSchema(SQLModel):
-    email: Optional[EmailStr] = Field(
-        default=None, description="The email address of the user"
-    )
+    email: Optional[EmailStr] = Field(default=None, max_length=EMAIL_MAX_LENGTH)
     phone_number: Optional[str] = Field(
-        default=None, description="The phone number of the user"
+        default=None, max_length=PHONE_NUMBER_MAX_LENGTH
     )
-    profile_picture_url: Optional[HttpUrl] = Field(
-        default=None, description="URL to the user's profile picture"
-    )
-    is_active: Optional[bool] = Field(
-        default=None, description="Indicates whether the user is active"
-    )
-    password: Optional[str] = Field(
-        default=None,
-        min_length=8,
-        description="The password for the user account (min 8 chars)",
-    )
+    profile_picture_url: Optional[HttpUrl] = Field(default=None)
 
 
-# 5. Response Schema: Output for reading a user
+# 5. User as returned by the API: never the hash.
 class UserResponseSchema(UserBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
-    is_deleted: bool = False
-
-
-# 6. Login Schema: API specific
-class UserLoginSchema(SQLModel):
-    identifier: str = Field(..., description="Username, email, or phone number")
-    type: Literal["username", "email", "phone_number"] = Field(
-        ..., description="Type of identifier provided"
-    )
-    password: str = Field(..., description="The password for the user account")
