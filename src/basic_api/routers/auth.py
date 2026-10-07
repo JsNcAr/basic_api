@@ -22,13 +22,13 @@ async def get_current_user_info(
 ):
     """
     Get current authenticated user information.
-    
+
     Returns information about the currently authenticated user based on the JWT token.
     This is a wrapper endpoint for frontend compatibility.
-    
+
     Args:
         current_user: Username extracted from JWT token (injected)
-        
+
     Returns:
         SuccessResponse[dict]: User information
             {
@@ -40,7 +40,7 @@ async def get_current_user_info(
                     "role": "admin"
                 }
             }
-            
+
     Example:
         curl http://localhost:8000/auth/me \\
              -H "Authorization: Bearer eyJ..."
@@ -61,16 +61,16 @@ async def get_current_user_info(
 async def logout(current_user: Annotated[str, Depends(get_current_user)]):
     """
     Logout endpoint (client-side token deletion).
-    
+
     This endpoint validates the token and returns success. The actual logout
     is handled client-side by deleting the JWT token from storage.
-    
+
     JWT tokens are stateless, so there's no server-side session to invalidate.
     The client should delete the token from localStorage/sessionStorage.
-    
+
     Args:
         current_user: Username extracted from JWT token (injected)
-        
+
     Returns:
         SuccessResponse[None]: Logout confirmation
             {
@@ -78,13 +78,13 @@ async def logout(current_user: Annotated[str, Depends(get_current_user)]):
                 "message": "Logout successful. Please delete your token client-side.",
                 "data": null
             }
-            
+
     Note:
         For enhanced security in production, consider:
         - Token blacklisting with Redis
         - Short token expiration times
         - Refresh token rotation
-        
+
     Example:
         curl -X POST http://localhost:8000/auth/logout \\
              -H "Authorization: Bearer eyJ..."

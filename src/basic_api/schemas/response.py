@@ -2,7 +2,7 @@
 Common Pydantic schemas for pagination, filters, and API responses.
 """
 
-from typing import Optional, Generic, TypeVar, Any
+from typing import Optional, Generic, TypeVar
 from pydantic import BaseModel, Field, ConfigDict
 
 # Generic type for response data

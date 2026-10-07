@@ -1,7 +1,7 @@
 from typing import Optional, Literal
 from datetime import datetime
 from sqlmodel import SQLModel, Field
-from pydantic import EmailStr, HttpUrl, model_validator, ConfigDict
+from pydantic import EmailStr, HttpUrl, model_validator
 
 
 # 1. Base Model: Shared fields for both DB and API
@@ -27,8 +27,6 @@ class UserBase(SQLModel):
     wifi_mac_address: Optional[str] = Field(
         default=None, description="The WiFi MAC address of the user"
     )
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 # 2. Table Model: The actual Database Table

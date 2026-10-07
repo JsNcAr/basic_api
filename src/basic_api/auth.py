@@ -89,7 +89,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
     Args:
         data: Dictionary of claims to encode in the token (e.g., {"sub": "username"})
-        expires_delta: Optional custom expiration time. If not provided, uses default from settings.
+        expires_delta: Optional custom expiration time. If not provided, uses
+            default from settings.
 
     Returns:
         Encoded JWT token string
@@ -142,7 +143,7 @@ def decode_access_token(token: str) -> dict:
 
 async def authenticate_user(
     session: AsyncSession, identifier: str, password: str
-) -> User | bool:
+) -> Optional[User]:
     """
     Authenticate a user by verifying identifier (username/email/phone) and password.
 
@@ -152,7 +153,7 @@ async def authenticate_user(
         password: Plain text password to verify
 
     Returns:
-        User object if authentication successful, False otherwise
+        User object if authentication successful, None otherwise
     """
     # Try to find user by username, email, or phone number
     statement = select(User).where(
@@ -164,9 +165,9 @@ async def authenticate_user(
     user = result.first()
 
     if not user:
-        return False
+        return None
 
     if not verify_password(password, user.hashed_password):
-        return False
+        return None
 
     return user

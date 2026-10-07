@@ -12,10 +12,8 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .auth import decode_access_token
-from .database import get_session
 
 # OAuth2 scheme for JWT token authentication
 # tokenUrl is the endpoint where clients can get tokens

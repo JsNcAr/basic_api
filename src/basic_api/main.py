@@ -24,7 +24,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 
 from .auth import authenticate_user, create_access_token
-from .dependencies import get_current_user, get_session
+from .database import get_session
+from .dependencies import get_current_user
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .routers import auth, users
@@ -85,25 +86,25 @@ async def login(
 ):
     """
     OAuth2 compatible token login endpoint.
-    
+
     Get an access token by providing username and password.
     The token should be included in subsequent requests as:
     `Authorization: Bearer <token>`
-    
+
     Args:
         form_data: OAuth2 password form with username and password fields
         session: Database session
-        
+
     Returns:
         dict: Access token and token type
             {
                 "access_token": "eyJ...",
                 "token_type": "bearer"
             }
-            
+
     Raises:
         HTTPException: 401 if credentials are invalid
-        
+
     Example:
         curl -X POST http://localhost:8000/token \\
              -H "Content-Type: application/x-www-form-urlencoded" \\
@@ -128,16 +129,16 @@ async def login(
 async def protected_example(current_user: Annotated[str, Depends(get_current_user)]):
     """
     Example of a protected endpoint that requires authentication.
-    
+
     This endpoint demonstrates how to protect routes with JWT authentication.
     The `current_user` dependency will validate the JWT token and return the username.
-    
+
     Args:
         current_user: Username extracted from JWT token (injected)
-        
+
     Returns:
         dict: Message with authenticated username
-        
+
     Example:
         curl http://localhost:8000/protected-example \\
              -H "Authorization: Bearer eyJ..."
