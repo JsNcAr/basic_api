@@ -25,8 +25,13 @@ load_dotenv()
 
 from basic_api.auth import create_access_token, get_password_hash  # noqa: E402
 from basic_api.database import get_session  # noqa: E402
+from basic_api.limiter import limiter  # noqa: E402
 from basic_api.main import app  # noqa: E402
 from basic_api.schemas.user import User  # noqa: E402
+
+# Every test client shares one IP, so per-IP limits would trip across unrelated
+# tests. A test that needs the limiter turns it back on for its own duration.
+limiter.enabled = False
 
 db_user = os.getenv("DB_USER", "postgres")
 db_pass = os.getenv("DB_PASSWORD", "postgres")
