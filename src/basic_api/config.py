@@ -99,7 +99,10 @@ CORS_HEADERS = csv_list(os.getenv("CORS_HEADERS", "*"))
 
 # --- Database ----------------------------------------------------------------
 
-_TESTING = "pytest" in sys.modules
+# True when imported by pytest. database.py uses it to disable connection
+# pooling, because each test runs in its own event loop and a pooled asyncpg
+# connection stays bound to the loop that opened it.
+TESTING = "pytest" in sys.modules
 
 
 def _test_database_url() -> str:
@@ -114,7 +117,7 @@ def _test_database_url() -> str:
 
 _database_url = os.getenv("DATABASE_URL")
 if not _database_url:
-    if _TESTING:
+    if TESTING:
         _database_url = _test_database_url()
     else:
         raise RuntimeError(

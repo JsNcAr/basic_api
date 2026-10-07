@@ -8,17 +8,26 @@ from typing import AsyncGenerator
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from .config import DATABASE_ECHO, DATABASE_URL
+from .config import DATABASE_ECHO, DATABASE_URL, TESTING
 from .schemas import user as _user_models  # noqa: F401  registers the tables
 
 logger = logging.getLogger(__name__)
 
 # pool_pre_ping checks a pooled connection with a trivial query before handing
 # it out, so a database restart costs one silent reconnect, not a failed request.
-engine = create_async_engine(DATABASE_URL, echo=DATABASE_ECHO, pool_pre_ping=True)
+# Under pytest there is no pool at all: every test runs in its own event loop,
+# and a pooled asyncpg connection is bound to the loop that opened it, so a
+# connection reused across tests fails with "attached to a different loop".
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=DATABASE_ECHO,
+    pool_pre_ping=True,
+    **({"poolclass": NullPool} if TESTING else {}),
+)
 
 # expire_on_commit=False keeps loaded attributes readable after a commit, which
 # the routers rely on when they build responses from objects just committed.
