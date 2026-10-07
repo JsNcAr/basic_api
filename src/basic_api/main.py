@@ -2,7 +2,8 @@
 FastAPI application entry point.
 
 A starter: OAuth2 password flow with JWT bearer tokens over async PostgreSQL,
-a client API key on the API routes, and a modular layout to build on.
+a client API key on the API routes, rate limits on the unauthenticated routes,
+and a modular layout to build on. Configuration comes from config.py.
 
 Authentication:
     POST /token with form fields `username` (a username, email or phone
@@ -22,39 +23,61 @@ from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Annotated, Optional
 
-from fastapi import Depends, FastAPI, Query
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from slowapi.errors import RateLimitExceeded
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .auth import access_token_lifetime, authenticate_user, create_access_token
-from .database import get_session, init_db
+from .config import (
+    APP_VERSION,
+    CORS_HEADERS,
+    CORS_METHODS,
+    CORS_ORIGINS,
+    ENABLE_DOCS,
+    ROOT_PATH,
+)
+from .database import engine, get_session, init_db, ping
 from .dependencies import get_current_user
+from .limiter import RATE_LIMIT_LOGIN, limiter, rate_limit_exceeded_handler
 from .routers import auth, users
 from .schemas.user import User
 from .security import verify_api_key
+
+SERVICE_NAME = "basic-api"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     yield
+    # Close pooled connections on the way out instead of letting the process
+    # drop them, which PostgreSQL logs as aborted connections.
+    await engine.dispose()
 
 
 app = FastAPI(
     title="Basic API",
     description="REST API starter with OAuth2 + JWT",
-    version="0.116.0",
-    # If deploying behind a reverse proxy under a subpath, pass
-    # root_path="/your-prefix" here or via `uvicorn --root-path`.
+    version=APP_VERSION,
+    root_path=ROOT_PATH,
     lifespan=lifespan,
+    # Off in production unless ENABLE_DOCS says otherwise (config.docs_enabled).
+    docs_url="/docs" if ENABLE_DOCS else None,
+    redoc_url="/redoc" if ENABLE_DOCS else None,
+    openapi_url="/openapi.json" if ENABLE_DOCS else None,
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust for production
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_methods=CORS_METHODS,
+    allow_headers=CORS_HEADERS,
 )
 
 
@@ -68,7 +91,7 @@ async def root():
     """
     return {
         "message": "Basic API",
-        "version": "0.1.0",
+        "version": APP_VERSION,
         "status": "healthy",
         "authentication": "OAuth2 + JWT (POST /token to get access token)",
     }
@@ -79,14 +102,29 @@ async def health_check():
     """
     Health check for monitoring. Public, so a monitor needs no credentials.
 
+    Checks the database with a short-timeout SELECT 1, because an API whose
+    database is down is not healthy however alive the process is.
+
     Returns:
-        dict: {"status": "healthy", "service": <name>}
+        dict: {"status": "healthy", "service": ..., "database": "ok"} with 200,
+            or {"status": "unhealthy", ..., "database": "unreachable"} with 503.
     """
-    return {"status": "healthy", "service": "leads-frontend-api"}
+    if not await ping():
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "service": SERVICE_NAME,
+                "database": "unreachable",
+            },
+        )
+    return {"status": "healthy", "service": SERVICE_NAME, "database": "ok"}
 
 
 @app.post("/token")
+@limiter.limit(RATE_LIMIT_LOGIN)
 async def login(
+    request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     expires_delta: Optional[timedelta] = Query(
         default=None,
@@ -100,11 +138,12 @@ async def login(
 ):
     """
     OAuth2 password flow. Public: no API key needed, which also lets Swagger's
-    Authorize dialog log in.
+    Authorize dialog log in. Rate-limited per client IP (RATE_LIMIT_LOGIN).
 
     `username` may be a username, an email address or a phone number.
 
     Args:
+        request: Needed by the rate limiter (injected).
         form_data: OAuth2 password form with `username` and `password` fields.
         expires_delta: Requested token lifetime (query parameter); the server
             caps it, see access_token_lifetime.
@@ -120,11 +159,12 @@ async def login(
 
     Raises:
         HTTPException: 401 for an unknown identifier or a wrong password, with
-            one message for both; 403 for a disabled account.
+            one message for both; 403 for a disabled account; 429 over the
+            rate limit, with a Retry-After header.
 
     Example:
-        curl -X POST http://localhost:8000/token \
-             -H "Content-Type: application/x-www-form-urlencoded" \
+        curl -X POST http://localhost:8000/token \\
+             -H "Content-Type: application/x-www-form-urlencoded" \\
              -d "username=user@example.com&password=your-password"
     """
     user = await authenticate_user(session, form_data.username, form_data.password)
@@ -154,8 +194,8 @@ async def protected_example(
         dict: A greeting naming the authenticated user.
 
     Example:
-        curl http://localhost:8000/protected-example \
-             -H "X-API-Key: your-api-key" \
+        curl http://localhost:8000/protected-example \\
+             -H "X-API-Key: your-api-key" \\
              -H "Authorization: Bearer eyJ..."
     """
     return {
