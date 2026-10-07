@@ -1,0 +1,5 @@
+[flake8]
+# Matches Black's line length; E203 (whitespace before ':') conflicts with Black's slicing style.
+max-line-length = 88
+extend-ignore = E203
+exclude = .git,.venv,__pycache__

@@ -12,10 +12,8 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .auth import decode_access_token
-from .database import get_session
 
 # OAuth2 scheme for JWT token authentication
 # tokenUrl is the endpoint where clients can get tokens
@@ -38,26 +36,24 @@ async def get_current_user_from_cookie(request: Request) -> str | None:
         return None
 
 
-def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)]
-) -> str:
+def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
     """
     Validate JWT token and return current username.
-    
+
     This dependency should be used to protect endpoints that require authentication.
     It extracts the token from the Authorization header, validates it, and returns
     the username from the token claims.
-    
+
     Args:
         token: JWT token from Authorization header (provided by oauth2_scheme)
         settings: Application settings (provided by get_settings)
-        
+
     Returns:
         Username from token claims
-        
+
     Raises:
         HTTPException: 401 if token is invalid or expired
-        
+
     Example:
         @router.get("/protected")
         async def protected_endpoint(

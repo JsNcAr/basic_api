@@ -26,3 +26,29 @@ packages = [{include = "basic_api", from = "src"}]
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.1.1,<10.0.0)",
+    "pytest-asyncio (>=1.4.0,<2.0.0)",
+    "httpx (>=0.28.1,<0.29.0)",
+    "black (>=26.10.0,<27.0.0)",
+    "flake8 (>=7.4.1,<8.0.0)",
+    "mypy (>=2.4.0,<3.0.0)",
+    "types-python-jose (>=3.5.0.20260408,<4.0.0.0)"
+]
+
+[tool.black]
+line-length = 88
+# Keep in step with requires-python above.
+target-version = ["py313"]
+
+# `poetry run mypy src`; CI runs it in the lint job.
+[tool.mypy]
+# Keep python_version in step with requires-python; files follows the src/ layout.
+python_version = "3.13"
+files = ["src"]
+plugins = ["pydantic.mypy"]
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
