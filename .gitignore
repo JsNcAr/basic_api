@@ -16,8 +16,6 @@ dist/
 
 # Virtual environments
 venv/
-.env
-.env
 
 # Poetry
 .poetry/
