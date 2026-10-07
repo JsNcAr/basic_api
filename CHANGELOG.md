@@ -5,6 +5,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
 
 ## [Unreleased]
 
+### Dependencies
+- Every dependency moved to its current release and the ranges in
+  `pyproject.toml` opened to the next major (`poetry.lock` is the pin):
+  FastAPI 0.121 to 0.142, Starlette 0.49 to 1.7, uvicorn 0.38 to 0.54,
+  pydantic 2.12 to 2.13, SQLModel 0.0.27 to 0.0.48, asyncpg 0.31 to 0.32,
+  python-multipart 0.0.20 to 0.0.32, python-dotenv 1.2.1 to 1.2.4, plus the
+  dev tools. SQLAlchemy is held at 2.0.x (`<2.1`) until 2.1 ships wheels (#7).
+- `cryptography` 46.0.3 to 50.0.2, closing seven published advisories (#7).
+
+### Changed
+- Timestamps are aware UTC end to end. SQLModel 0.0.45+ maps `datetime`
+  columns to `TIMESTAMP WITH TIME ZONE` and refuses naive values, so
+  `utc_now()` now returns an aware datetime and responses end in `Z`. A database created before this change keeps `TIMESTAMP WITHOUT TIME
+  ZONE` columns (`create_all` never alters them); migrate them before
+  upgrading an existing deployment (#7).
+- FastAPI 0.132+ rejects JSON requests whose `Content-Type` is not a JSON
+  media type; clients must send `application/json` (#7).
+
 Five pull requests bringing the starter up to what a production API built on it
 (KorvynApi) learned.
 

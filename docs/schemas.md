@@ -18,7 +18,8 @@ Fields shared by the table and the API schemas.
 ## User (table `users`)
 
 `UserBase` plus `id` (primary key), `hashed_password` (bcrypt over a SHA-256
-pre-hash; never returned), `created_at` and `updated_at` (naive UTC).
+pre-hash; never returned), `created_at` and `updated_at` (aware UTC, stored as
+`TIMESTAMP WITH TIME ZONE` and serialised with a trailing `Z`).
 
 ## UserCreateSchema
 

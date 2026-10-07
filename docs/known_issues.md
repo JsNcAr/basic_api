@@ -15,8 +15,6 @@ looks like. Remove an entry in the same change that fixes it.
 | Security | [CORS allows every origin by default](#cors-allows-every-origin-by-default) | Low |
 | Security | [Login identifiers can collide across columns](#login-identifiers-can-collide-across-columns) | Medium |
 | Security | [Password policy is length only](#password-policy-is-length-only) | Low |
-| Dependencies | [cryptography has published vulnerabilities](#cryptography-has-published-vulnerabilities) | High |
-| Dependencies | [Top-level dependencies are pinned to stale minors](#top-level-dependencies-are-pinned-to-stale-minors) | Medium |
 | Data | [Schema is created at startup, not migrated](#schema-is-created-at-startup-not-migrated) | High |
 | Operations | [Rate limits are per IP and per process](#rate-limits-are-per-ip-and-per-process) | Low |
 | Operations | [No logging configuration or observability](#no-logging-configuration-or-observability) | Medium |
@@ -26,7 +24,6 @@ looks like. Remove an entry in the same change that fixes it.
 | Code | [The OpenAPI document under-describes responses](#the-openapi-document-under-describes-responses) | Medium |
 | Code | [Startup validation and the login limit are untested](#startup-validation-and-the-login-limit-are-untested) | Low |
 | Code | [Application code detects the test runner](#application-code-detects-the-test-runner) | Low |
-| Code | [Timestamps are serialised without a timezone](#timestamps-are-serialised-without-a-timezone) | Low |
 | Code | [The root banner reports healthy without checking](#the-root-banner-reports-healthy-without-checking) | Low |
 
 ---
@@ -124,40 +121,6 @@ passwords, no rejection of the username or email as the password.
 **Fix:** a maximum length, a breached-password check (the k-anonymity range API
 of Have I Been Pwned, or a local list), and refusing passwords equal to the
 account's identifiers.
-
----
-
-## Dependencies
-
-### cryptography has published vulnerabilities
-
-**Where:** `poetry.lock` (`cryptography 46.0.3`, pulled in by `python-jose[cryptography]`).
-
-`pip-audit` on the installed environment (2026-10-07) reports seven advisories
-against 46.0.3: `GHSA-537c-gmf6-5ccf`, `PYSEC-2026-35`, `PYSEC-2026-36`,
-`PYSEC-2026-2141`, `PYSEC-2026-3552`, `PYSEC-2026-3553`, `PYSEC-2026-3554`,
-fixed between 46.0.5 and 50.0.0. `poetry update cryptography --dry-run`
-resolves to 50.0.2 within the current constraints, so the fix is a lock-file
-change. The same version is pinned in KorvynApi.
-
-**Fix:** `poetry update cryptography`, commit the lock, and add `pip-audit` to
-the CI `lint` job so the next advisory fails a pull request instead of waiting
-to be noticed (see [CI has no coverage, dependency audit or secret scan](#ci-has-no-coverage-dependency-audit-or-secret-scan)).
-
-### Top-level dependencies are pinned to stale minors
-
-**Where:** `pyproject.toml` (`[project.dependencies]`).
-
-The ranges lock each package to the minor it was added at, for example
-`fastapi (>=0.121.1,<0.122.0)`, so `poetry update` cannot move them. On
-2026-10-07 the gaps were: fastapi 0.121.1 against 0.142.2, sqlmodel 0.0.27
-against 0.0.48, uvicorn 0.38.0 against 0.54.0, pydantic 2.12.4 against 2.13.5,
-asyncpg 0.31.0 against 0.32.0, python-multipart 0.0.20 against 0.0.32,
-python-dotenv 1.2.1 against 1.2.4. Each minor carries fixes the project never
-receives.
-
-**Fix:** bump the ranges deliberately, one package at a time with the suite as
-the check, and let Dependabot or Renovate open the next ones.
 
 ---
 
@@ -282,18 +245,6 @@ reached only by one of the two paths.
 **Fix:** have the tests set `DATABASE_URL` explicitly and introduce a
 `DATABASE_POOL` setting (`default` or `none`) that the fixtures set, so the
 application reads configuration only.
-
-### Timestamps are serialised without a timezone
-
-**Where:** `src/basic_api/utils.py` (`utc_now`), `src/basic_api/schemas/user.py` (`created_at`, `updated_at`).
-
-The columns are `TIMESTAMP WITHOUT TIME ZONE` and the values are naive UTC, so
-responses carry `"2026-10-07T16:44:49.065138"` with no offset. A client that
-parses it as local time is off by its UTC offset.
-
-**Fix:** attach `timezone.utc` on the way out (a field serializer on the
-response schema) so the JSON ends in `Z` or `+00:00`, or make the columns
-`timestamptz` and store aware values throughout.
 
 ### The root banner reports healthy without checking
 
