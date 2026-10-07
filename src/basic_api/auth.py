@@ -5,72 +5,35 @@ Authentication utilities for OAuth2 + JWT.
 - JWT creation and validation
 - User authentication that takes the same time whether or not the user exists
 
-Settings are read and validated once, at import: a missing or weak secret, an
-algorithm outside the HMAC family, or too few bcrypt rounds stop the process
-before it can serve a request with a bad configuration.
+Settings come from config.py, which validates them at import: a missing or
+weak secret, an algorithm outside the HMAC family, or too few bcrypt rounds stop
+the process before it can serve a request with a bad configuration.
 """
 
 import asyncio
 import hashlib
 import logging
-import os
 from datetime import timedelta
 from typing import Optional
 
 import bcrypt
-from dotenv import load_dotenv
 from fastapi import HTTPException, status
 from jose import jwt
 from jose.exceptions import JOSEError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from .config import (
+    BCRYPT_ROUNDS,
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES,
+    JWT_ALGORITHM,
+    JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES,
+    JWT_SECRET_KEY,
+)
 from .schemas.user import User
 from .utils import utc_now
 
-load_dotenv()
-
 logger = logging.getLogger(__name__)
-
-# 32 bytes is the HMAC key size the HS256 family is specified for; a shorter
-# secret weakens every token at once.
-_MIN_SECRET_BYTES = 32
-_ALLOWED_ALGORITHMS = ("HS256", "HS384", "HS512")
-_MIN_BCRYPT_ROUNDS = 12
-
-_secret = os.getenv("JWT_SECRET_KEY")
-if not _secret:
-    raise RuntimeError("JWT_SECRET_KEY environment variable is required")
-if len(_secret.encode("utf-8")) < _MIN_SECRET_BYTES:
-    raise RuntimeError(
-        f"JWT_SECRET_KEY must be at least {_MIN_SECRET_BYTES} bytes. Generate one "
-        "with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
-    )
-JWT_SECRET_KEY: str = _secret
-
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM") or "HS256"
-if JWT_ALGORITHM not in _ALLOWED_ALGORITHMS:
-    raise RuntimeError(
-        f"JWT_ALGORITHM={JWT_ALGORITHM!r} is not one of "
-        + ", ".join(_ALLOWED_ALGORITHMS)
-    )
-
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 30))
-# Longest lifetime a client may request at login (default 7 days).
-JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES = int(
-    os.getenv("JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES", 7 * 24 * 60)
-)
-if JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES < JWT_ACCESS_TOKEN_EXPIRE_MINUTES:
-    raise RuntimeError(
-        "JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES must be at least "
-        "JWT_ACCESS_TOKEN_EXPIRE_MINUTES."
-    )
-
-BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", _MIN_BCRYPT_ROUNDS))
-if BCRYPT_ROUNDS < _MIN_BCRYPT_ROUNDS:
-    raise RuntimeError(
-        f"BCRYPT_ROUNDS={BCRYPT_ROUNDS} is below the minimum of {_MIN_BCRYPT_ROUNDS}."
-    )
 
 # One message for every credential failure, so a caller cannot tell an unknown
 # account from a wrong password.

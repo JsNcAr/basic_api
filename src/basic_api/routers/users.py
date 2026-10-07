@@ -1,12 +1,13 @@
 import logging
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..auth import get_password_hash_async
 from ..database import get_session
+from ..limiter import RATE_LIMIT_REGISTER, limiter
 from ..schemas import SuccessResponse
 from ..schemas.user import User, UserCreateSchema, UserResponseSchema
 
@@ -16,14 +17,17 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.post("/", response_model=SuccessResponse[UserResponseSchema], status_code=201)
+@limiter.limit(RATE_LIMIT_REGISTER)
 async def create_user(
+    request: Request,
     user_create: UserCreateSchema = Body(...),
     session: AsyncSession = Depends(get_session),
 ):
     """
-    Register a user.
+    Register a user. Rate-limited per client IP (RATE_LIMIT_REGISTER).
 
     Args:
+        request: Needed by the rate limiter (injected).
         user_create: Registration payload; `username` and `password` required.
         session: Database session.
 
@@ -34,8 +38,9 @@ async def create_user(
         HTTPException: 409 naming the field that is already taken (username,
             email or phone); a 409 with a generic message if two registrations
             race past the checks and the database's unique constraint decides;
-            500, logged, for anything else. The response never carries the
-            database's error text.
+            500, logged, for anything else; 429 over the rate limit, with a
+            Retry-After header. The response never carries the database's
+            error text.
 
     Example:
         curl -X POST http://localhost:8000/api/users/ \

@@ -7,16 +7,12 @@ own clients from random traffic, and rely on per-user authentication and rate
 limits for protection.
 """
 
-import os
 import secrets
 
-from dotenv import load_dotenv
 from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 
-load_dotenv()
-
-API_KEY = os.getenv("API_KEY")
+from .config import API_KEY
 
 # A declared security scheme, so it appears in the OpenAPI document and the
 # Swagger "Authorize" dialog can send it. auto_error=False lets this module
@@ -37,18 +33,14 @@ async def verify_api_key(x_api_key: str | None = Security(api_key_header)) -> st
         The key, so a route can depend on it like any other value.
 
     Raises:
-        HTTPException: 500 when no key is configured on the server (fail closed);
-            401 when the header is missing or does not equal the configured key.
+        HTTPException: 401 when the header is missing or does not equal the
+            configured key. (A missing API_KEY stops the app at startup, in
+            config.py, so there is no runtime "not configured" case.)
 
     Example:
         @router.get("/things", dependencies=[Depends(verify_api_key)])
         async def list_things(): ...
     """
-    if not API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="API key not configured on server",
-        )
     # compare_digest: equal time whatever the first differing byte is.
     if not x_api_key or not secrets.compare_digest(x_api_key, API_KEY):
         raise HTTPException(
