@@ -1,8 +1,7 @@
 """
 Authentication wrapper endpoints.
 
-Provides standardized /auth/* endpoints for frontend compatibility.
-These are thin wrappers around the existing OAuth2 + JWT authentication.
+Thin /auth/* routes around the OAuth2 + JWT flow for frontend convenience.
 """
 
 from typing import Annotated
@@ -10,83 +9,38 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from ..dependencies import get_current_user
-from ..schemas import SuccessResponse
+from ..schemas import SuccessResponse, UserResponseSchema
+from ..schemas.user import User
 
-# Create router
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.get("/me", response_model=SuccessResponse[dict])
+@router.get("/me", response_model=SuccessResponse[UserResponseSchema])
 async def get_current_user_info(
-    current_user: Annotated[str, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(get_current_user)],
 ):
     """
-    Get current authenticated user information.
-
-    Returns information about the currently authenticated user based on the JWT token.
-    This is a wrapper endpoint for frontend compatibility.
-
-    Args:
-        current_user: Username extracted from JWT token (injected)
-
-    Returns:
-        SuccessResponse[dict]: User information
-            {
-                "success": true,
-                "message": "User retrieved successfully",
-                "data": {
-                    "username": "admin",
-                    "email": "admin@example.com",
-                    "role": "admin"
-                }
-            }
+    The authenticated user, as stored.
 
     Example:
-        curl http://localhost:8000/auth/me \\
+        curl http://localhost:8000/api/auth/me \\
+             -H "X-API-Key: your-api-key" \\
              -H "Authorization: Bearer eyJ..."
     """
     return SuccessResponse(
-        success=True,
-        message="User retrieved successfully",
-        data={
-            "username": current_user,
-            # Placeholder - extend with real user data
-            "email": f"{current_user}@example.com",
-            "role": "admin",  # Placeholder - extend with real role management
-        },
+        success=True, message="User retrieved successfully", data=current_user
     )
 
 
 @router.post("/logout", response_model=SuccessResponse[None])
-async def logout(current_user: Annotated[str, Depends(get_current_user)]):
+async def logout(current_user: Annotated[User, Depends(get_current_user)]):
     """
-    Logout endpoint (client-side token deletion).
-
-    This endpoint validates the token and returns success. The actual logout
-    is handled client-side by deleting the JWT token from storage.
-
-    JWT tokens are stateless, so there's no server-side session to invalidate.
-    The client should delete the token from localStorage/sessionStorage.
-
-    Args:
-        current_user: Username extracted from JWT token (injected)
-
-    Returns:
-        SuccessResponse[None]: Logout confirmation
-            {
-                "success": true,
-                "message": "Logout successful. Please delete your token client-side.",
-                "data": null
-            }
-
-    Note:
-        For enhanced security in production, consider:
-        - Token blacklisting with Redis
-        - Short token expiration times
-        - Refresh token rotation
+    Confirm a logout. Tokens are stateless, so the client deletes its copy;
+    nothing is invalidated server-side (see docs/known_issues.md).
 
     Example:
-        curl -X POST http://localhost:8000/auth/logout \\
+        curl -X POST http://localhost:8000/api/auth/logout \\
+             -H "X-API-Key: your-api-key" \\
              -H "Authorization: Bearer eyJ..."
     """
     return SuccessResponse(
