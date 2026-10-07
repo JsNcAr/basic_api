@@ -18,8 +18,8 @@ from typing import Optional
 
 import bcrypt
 from fastapi import HTTPException, status
-from jose import jwt
-from jose.exceptions import JOSEError
+import jwt
+from jwt import PyJWTError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -201,7 +201,7 @@ def decode_access_token(token: str) -> dict:
     """
     try:
         return jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-    except JOSEError as e:
+    except PyJWTError as e:
         logger.debug("Rejected token: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
