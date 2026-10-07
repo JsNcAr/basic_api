@@ -15,6 +15,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
 - `cryptography` 46.0.3 to 50.0.2, closing seven published advisories (#7).
 
 ### Changed
+- Python 3.14: `.python-version` says `3.14`, `requires-python` is
+  `>=3.14,<4.0`, Black targets `py314` and mypy checks against 3.14. Every
+  dependency in the lock ships a 3.14 wheel or is pure Python, so no package is
+  built from source (#8).
 - Timestamps are aware UTC end to end. SQLModel 0.0.45+ maps `datetime`
   columns to `TIMESTAMP WITH TIME ZONE` and refuses naive values, so
   `utc_now()` now returns an aware datetime and responses end in `Z`. A database created before this change keeps `TIMESTAMP WITHOUT TIME
