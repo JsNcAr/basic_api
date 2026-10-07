@@ -7,17 +7,22 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.13,<4.0"
+# Ranges are open to the next major: poetry.lock is the exact pin, Dependabot
+# proposes bumps, CI is the check. Update with `poetry update` and the suite.
 dependencies = [
-    "fastapi (>=0.121.1,<0.122.0)",
-    "bcrypt (>=5.0.0,<6.0.0)",
-    "python-dotenv (>=1.2.1,<2.0.0)",
-    "uvicorn (>=0.38.0,<0.39.0)",
-    "python-jose[cryptography] (>=3.5.0,<4.0.0)",
-    "python-multipart (>=0.0.20,<0.0.21)",
-    "pydantic[email] (>=2.12.4,<3.0.0)",
-    "sqlmodel (>=0.0.27,<0.0.28)",
-    "asyncpg (>=0.31.0,<0.32.0)",
-    "slowapi (>=0.1.10,<0.2.0)"
+    "fastapi (>=0.142.2,<1.0)",
+    "bcrypt (>=5.0.0,<6.0)",
+    "python-dotenv (>=1.2.4,<2.0)",
+    "uvicorn (>=0.54.0,<1.0)",
+    "python-jose[cryptography] (>=3.5.0,<4.0)",
+    "python-multipart (>=0.0.32,<1.0)",
+    "pydantic[email] (>=2.13.5,<3.0)",
+    "sqlmodel (>=0.0.48,<1.0)",
+    # SQLAlchemy is SQLModel's dependency; constrained here because 2.1.x ships no
+    # wheels yet (2026-10) and SQLModel allows up to <2.2. Revisit when both move.
+    "sqlalchemy (>=2.0.54,<2.1)",
+    "asyncpg (>=0.32.0,<1.0)",
+    "slowapi (>=0.1.10,<1.0)",
 ]
 
 [tool.poetry]
@@ -30,13 +35,13 @@ build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
 dev = [
-    "pytest (>=9.1.1,<10.0.0)",
-    "pytest-asyncio (>=1.4.0,<2.0.0)",
-    "httpx (>=0.28.1,<0.29.0)",
-    "black (>=26.10.0,<27.0.0)",
-    "flake8 (>=7.4.1,<8.0.0)",
-    "mypy (>=2.4.0,<3.0.0)",
-    "types-python-jose (>=3.5.0.20260408,<4.0.0.0)"
+    "pytest (>=9.1.1,<10)",
+    "pytest-asyncio (>=1.4.0,<2)",
+    "httpx (>=0.28.1,<1.0)",
+    "black (>=26.10.0,<27)",
+    "flake8 (>=7.4.1,<8)",
+    "mypy (>=2.4.0,<3)",
+    "types-python-jose (>=3.5.0.20260408,<4)",
 ]
 
 [tool.black]
