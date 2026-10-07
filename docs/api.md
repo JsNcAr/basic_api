@@ -1,60 +1,73 @@
 # API Reference
 
-This document outlines the available API endpoints.
+Base URL in development: `http://localhost:8000`. With `ROOT_PATH` set, prefix
+every path with it.
 
-## Base URL
+## Conventions
 
-The API is served from the server root — `http://localhost:8000` in development.
+**Success envelope**, on every `/api` route:
 
-Top-level routes (`/`, `/health`, `/token`, `/protected-example`) are declared on
-the application itself. Router endpoints are mounted under `/api`, so the auth
-and user routes below are reached at `/api/auth/...` and `/api/users/...`.
+```json
+{"success": true, "message": "...", "data": ...}
+```
 
-If you deploy behind a reverse proxy that serves the app under a subpath, set
-`root_path` on the `FastAPI()` call in `main.py`, or pass
-`uvicorn --root-path /your-prefix`, and prepend that prefix to every path here.
+`/`, `/health` and `/token` return plain objects (the OAuth2 token response has
+a fixed shape).
 
-## Authentication Endpoints
+**Errors** are FastAPI's default body: `detail` holding a string, or a list of
+validation errors for `422`.
 
-### Get Current User
--   **URL**: `/auth/me`
--   **Method**: `GET`
--   **Description**: Retrieves information about the currently authenticated user.
--   **Headers**: `Authorization: Bearer <token>`
--   **Response**: `SuccessResponse[dict]`
+```json
+{"detail": "Not a valid request"}
+```
 
-### Logout
--   **URL**: `/auth/logout`
--   **Method**: `POST`
--   **Description**: Logs out the user (client-side token deletion).
--   **Headers**: `Authorization: Bearer <token>`
--   **Response**: `SuccessResponse[None]`
+**Auth** column: `key` is the `X-API-Key` header, `token` is
+`Authorization: Bearer <jwt>`. See [Authentication](authentication.md) for the
+error tables common to all protected routes.
 
-### Get Token
--   **URL**: `/token`
--   **Method**: `POST`
--   **Description**: Obtains an access token using username and password.
--   **Body**: `OAuth2PasswordRequestForm` (username, password)
--   **Response**: JSON with `access_token` and `token_type`.
+## System
 
-## User Endpoints
+| Method | Path | Auth | Status | Response |
+|---|---|---|---|---|
+| `GET` | `/` | none | `200` | `{"message", "version", "status", "authentication"}` |
+| `GET` | `/health` | none | `200` / `503` | `{"status": "healthy", "service": "basic-api", "database": "ok"}`; `503` with `"database": "unreachable"` when `SELECT 1` fails within 2 s |
 
-### Create User
--   **URL**: `/users/`
--   **Method**: `POST`
--   **Description**: Creates a new user.
--   **Body**: `UserCreateSchema`
--   **Response**: `SuccessResponse[dict]`
+## Authentication
 
-## Health Check
+| Method | Path | Auth | Status | Description |
+|---|---|---|---|---|
+| `POST` | `/token` | none, rate-limited | `200` | OAuth2 password form; returns `access_token`, `expires_in`, `token_type`. Optional `?expires_delta=` |
+| `GET` | `/api/auth/me` | key + token | `200` | The authenticated user (`UserResponseSchema`) |
+| `POST` | `/api/auth/logout` | key + token | `200` | Confirms; the client deletes its token. Nothing is invalidated server-side |
 
--   **URL**: `/health`
--   **Method**: `GET`
--   **Description**: Checks the health status of the API.
+## Users
 
-## Protected Example
+| Method | Path | Auth | Status | Description |
+|---|---|---|---|---|
+| `POST` | `/api/users/` | key, rate-limited | `201` | Register. `409` naming the taken field: `Username is already taken`, `Email address is already registered`, `Phone number is already associated with an account`; generic `409` if two registrations raced |
+| `GET` | `/api/users/me` | key + token | `200` | Own profile |
+| `PATCH` | `/api/users/me` | key + token | `200` | Change only the fields sent (`email`, `phone_number`, `profile_picture_url`); `null` clears, omitted leaves alone; `409` as above for a collision. `username`, `is_active` and `password` are ignored if sent |
+| `POST` | `/api/users/me/change-password` | key + token | `200` | Body `{"current_password", "new_password"}`; `400 Incorrect current password`; `422` if the new one is under 8 characters |
+| `DELETE` | `/api/users/me` | key + token | `200` | Body `{"password"}`; `400 Incorrect password`; `422` without it. Hard delete; tokens for the account are refused from the next request |
 
--   **URL**: `/protected-example`
--   **Method**: `GET`
--   **Description**: An example endpoint requiring authentication.
--   **Headers**: `Authorization: Bearer <token>`
+There is no user listing and no read-by-id.
+
+## Example
+
+| Method | Path | Auth | Status | Description |
+|---|---|---|---|---|
+| `GET` | `/protected-example` | key + token | `200` | Shows how to require both credentials; copy its signature for a new protected route |
+
+## Status codes at a glance
+
+| Code | When |
+|---|---|
+| `200` / `201` | Success; `201` only on registration |
+| `400` | A confirmation password was wrong |
+| `401` | Missing or invalid API key; missing, invalid or orphaned token; bad login |
+| `403` | Account disabled |
+| `409` | Username, email or phone number already in use |
+| `422` | Body or form fails validation (lengths, URL rule, required fields) |
+| `429` | Rate limit; see `Retry-After` |
+| `500` | Unexpected failure, logged server-side with a generic message |
+| `503` | `/health` only: database unreachable |

@@ -1,22 +1,30 @@
-# Basic API Documentation
+# basic-api documentation
 
-Welcome to the documentation for the **Basic API** project.
+A FastAPI starter with OAuth2 + JWT authentication over async PostgreSQL, a
+client API key, rate limits, user self-service, tests and CI.
 
-## Overview
+## Key points
 
-This project is a simple FastAPI application designed for lead generation workflows with OAuth2 + JWT authentication. It provides a modular structure with routers, dependencies, and schemas, making it easy to extend and maintain.
-
-## Key Features
-
-- **REST API Endpoints**: Supports lead pipeline workflows including refresh, retrieve, enrich, and campaign actions.
-- **Authentication**: Secure OAuth2 + JWT authentication with support for a single admin user.
-- **Flexible Login**: Users can authenticate using their username, email, or phone number.
-- **Modular Architecture**: Organized into routers, dependencies, and schemas for better code management.
-- **Environment Configuration**: Uses `.env` files for managing configuration and secrets.
+- **Two credentials.** Every `/api` route needs the client API key in
+  `X-API-Key`; routes about a user also need a bearer token. `/`, `/health` and
+  `/token` need neither.
+- **Tokens carry the user id** and the user is loaded on every request, so a
+  deleted or disabled account loses access immediately.
+- **Login is constant-time** and answers one message for an unknown account and
+  a wrong password.
+- **Configuration is one module** (`config.py`) that refuses to start on a
+  missing or invalid value.
+- **Rate limits** on login and registration; **health** checks the database.
 
 ## Navigation
 
-- [Setup Guide](setup.md): Instructions on how to install, configure, and run the application.
-- [API Reference](api.md): Detailed documentation of the available API endpoints.
-- [Authentication](authentication.md): Explanation of the authentication flow and token management.
-- [Schemas](schemas.md): Description of the data models used in the API.
+- [Setup](setup.md): install, environment variables, run, test, code quality,
+  adapting the starter to a new project.
+- [Authentication](authentication.md): the API key, the login flow, token
+  lifetime, what invalidates a token, rate limits, every error.
+- [API Reference](api.md): every endpoint with status codes, the response
+  envelope and the error shape.
+- [Schemas](schemas.md): request and response models with their limits.
+- [Known Issues](known_issues.md): what the starter deliberately leaves for a
+  real project to decide.
+- [Changelog](../CHANGELOG.md).

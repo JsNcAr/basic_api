@@ -1,56 +1,73 @@
 # Schemas
 
-This section describes the data models used in the API.
+All in `src/basic_api/schemas/user.py` unless noted. Limits are enforced by
+pydantic (`422`) and by the column types.
 
-## User Schemas
+## UserBase
 
-### UserSchema
-Base schema for user data.
+Fields shared by the table and the API schemas.
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `username` | `str` | Unique username (optional) |
-| `email` | `EmailStr` | Email address (optional) |
-| `phone_number` | `str` | Phone number (optional) |
-| `profile_picture_url` | `HttpUrl` | URL to profile picture (optional) |
-| `is_active` | `bool` | Indicates if user is active |
-| `bluetooth_address` | `str` | Bluetooth address (optional) |
-| `wifi_mac_address` | `str` | WiFi MAC address (optional) |
+| Field | Type | Constraints |
+|---|---|---|
+| `username` | `str` | required, unique, at most 64 characters; the default login identifier |
+| `email` | `EmailStr` | optional, unique, at most 254 characters; also a login identifier |
+| `phone_number` | `str` | optional, unique, at most 32 characters; also a login identifier |
+| `profile_picture_url` | `str` | optional, at most 2083 characters, must be an http(s) URL |
+| `is_active` | `bool` | default `true`; a disabled account cannot log in or use its tokens |
 
-### UserCreateSchema
-Schema for creating a new user. Inherits from `UserSchema`.
+## User (table `users`)
 
--   **Additional Fields**:
-    -   `password`: `str` (min length 8)
--   **Validation**: Requires at least one of `username`, `email`, or `phone_number`.
+`UserBase` plus `id` (primary key), `hashed_password` (bcrypt over a SHA-256
+pre-hash; never returned), `created_at` and `updated_at` (naive UTC).
 
-### UserUpdateSchema
-Schema for updating user details.
+## UserCreateSchema
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `email` | `EmailStr` | Email address (optional) |
-| `phone_number` | `str` | Phone number (optional) |
-| `profile_picture_url` | `HttpUrl` | URL to profile picture (optional) |
-| `is_active` | `bool` | Indicates if user is active (optional) |
-| `password` | `str` | New password (optional, min length 8) |
+Body of `POST /api/users/`: `UserBase` plus `password` (at least 8 characters).
+`profile_picture_url` is validated as an http(s) URL. `username` and `password`
+are required.
 
-### UserLoginSchema
-Schema for login requests.
+## UserUpdateSchema
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `identifier` | `str` | Username, email, or phone number |
-| `type` | `str` | "username", "email", or "phone_number" |
-| `password` | `str` | User password |
+Body of `PATCH /api/users/me`. Only profile fields; anything else sent is
+ignored.
 
-## Response Schemas
+| Field | Type |
+|---|---|
+| `email` | `EmailStr`, optional, at most 254 |
+| `phone_number` | `str`, optional, at most 32 |
+| `profile_picture_url` | `HttpUrl`, optional |
 
-### SuccessResponse
-Generic wrapper for successful API responses.
+Only fields present in the body are applied: an omitted field is untouched, an
+explicit `null` clears it.
 
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `success` | `bool` | Always `true` for success |
-| `message` | `str` | Human-readable message |
-| `data` | `T` | The actual response data (generic type) |
+## PasswordChangeSchema
+
+Body of `POST /api/users/me/change-password`.
+
+| Field | Type |
+|---|---|
+| `current_password` | `str`, required |
+| `new_password` | `str`, required, at least 8 characters |
+
+## UserDeleteSchema
+
+Body of `DELETE /api/users/me`.
+
+| Field | Type |
+|---|---|
+| `password` | `str`, required |
+
+## UserResponseSchema
+
+What every user-returning route sends: `UserBase` plus `id`, `created_at`,
+`updated_at`. Never the hash.
+
+## SuccessResponse (`schemas/response.py`)
+
+| Field | Type |
+|---|---|
+| `success` | `bool`, always `true` |
+| `message` | `str`, optional |
+| `data` | the payload (generic) |
+
+Errors are not wrapped; see the conventions in the [API Reference](api.md#conventions).
