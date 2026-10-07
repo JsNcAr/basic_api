@@ -103,9 +103,15 @@ poetry run flake8 src tests          # lint (.flake8 matches Black)
 poetry run mypy                      # types, [tool.mypy] in pyproject.toml
 ```
 
-CI (`.github/workflows/ci.yml`) runs all three in `lint` and the suite in `test`
+```bash
+poetry run pip-audit                 # known vulnerabilities in the installed dependencies
+```
+
+CI (`.github/workflows/ci.yml`) runs all four in `lint` and the suite in `test`
 against a `postgres:17` service, on every push to `main` and every pull
-request. It installs the Poetry version named in `poetry.lock`'s header and the
+request. Dependabot (`.github/dependabot.yml`) opens weekly pull requests for
+dependency and action updates, grouped by minor and patch; the same CI checks
+them. It installs the Poetry version named in `poetry.lock`'s header and the
 Python version in `.python-version`, so neither is pinned twice.
 
 ## Adapting this starter

@@ -45,6 +45,7 @@ docs/              # setup, authentication, api, schemas, known_issues
   test files runs without one)
 * **Format & lint**: `poetry run black src tests && poetry run flake8 src tests`
 * **Type check**: `poetry run mypy`
+* **Dependency audit**: `poetry run pip-audit` (CI runs it in `lint`)
 * **Dependencies**: `poetry add <pkg>` (dev tools: `--group dev`), then `poetry install`.
   Ranges in `pyproject.toml` are open to the next major; `poetry.lock` is the pin.
   Update with `poetry update` (or `poetry lock --regenerate` for every transitive
