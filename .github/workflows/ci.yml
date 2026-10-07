@@ -14,7 +14,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install "poetry==2.2.1"
+      # Pinned to the Poetry that wrote poetry.lock: the content hash differs between
+      # versions, and an older Poetry rejects the lock as stale (seen with 2.2.1).
+      - run: pip install "poetry==2.4.2"
       - run: poetry install --no-interaction
       - run: poetry run black --check src tests
       - run: poetry run flake8 src tests
@@ -51,6 +53,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - run: pip install "poetry==2.2.1"
+      # Pinned to the Poetry that wrote poetry.lock: the content hash differs between
+      # versions, and an older Poetry rejects the lock as stale (seen with 2.2.1).
+      - run: pip install "poetry==2.4.2"
       - run: poetry install --no-interaction
       - run: poetry run pytest
