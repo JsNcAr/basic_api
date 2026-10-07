@@ -1,76 +1,72 @@
 """
-FastAPI dependency injection providers.
-
-Provides reusable dependencies for:
-- Service instantiation
-- Database sessions
-- Authentication (OAuth2 + JWT)
-- Configuration access
+FastAPI dependencies for authentication.
 """
 
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlmodel.ext.asyncio.session import AsyncSession
 
-from .auth import decode_access_token
+from .auth import INVALID_TOKEN_DETAIL, decode_access_token, get_user_by_id
+from .database import get_session
+from .schemas.user import User
 
-# OAuth2 scheme for JWT token authentication
-# tokenUrl is the endpoint where clients can get tokens
+# tokenUrl is where clients obtain tokens; Swagger's Authorize dialog uses it.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-async def get_current_user_from_cookie(request: Request) -> str | None:
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    session: AsyncSession = Depends(get_session),
+) -> User:
     """
-    Validate JWT token from cookie and return username.
-    This is for browser-based flows where headers are not sent.
-    """
-    token = request.cookies.get("access_token")
-    if not token:
-        return None
-    try:
-        payload = decode_access_token(token)
-        username: str | None = payload.get("sub")
-        return username
-    except HTTPException:
-        return None
+    The user the bearer token belongs to, loaded from the database.
 
-
-def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
-    """
-    Validate JWT token and return current username.
-
-    This dependency should be used to protect endpoints that require authentication.
-    It extracts the token from the Authorization header, validates it, and returns
-    the username from the token claims.
+    Loading the user on every request is what makes deletion and deactivation
+    take effect at once, instead of when the token expires. The subject claim
+    is the user id, so a username released by a deletion and taken by a new
+    account can never make an old token resolve to the new user.
 
     Args:
-        token: JWT token from Authorization header (provided by oauth2_scheme)
-        settings: Application settings (provided by get_settings)
+        token: Bearer token from the Authorization header (injected).
+        session: Database session (injected).
 
     Returns:
-        Username from token claims
+        The User the token belongs to.
 
     Raises:
-        HTTPException: 401 if token is invalid or expired
+        HTTPException: 401 when the token is invalid, its subject is not an id,
+            or the user no longer exists; 403 when the user is disabled.
 
     Example:
-        @router.get("/protected")
-        async def protected_endpoint(
-            current_user: Annotated[str, Depends(get_current_user)]
-        ):
-            return {"message": f"Hello {current_user}"}
+        @router.get("/mine")
+        async def mine(current_user: Annotated[User, Depends(get_current_user)]):
+            return {"username": current_user.username}
     """
-    # Decode and validate token (raises HTTPException if invalid)
     payload = decode_access_token(token)
-
-    # Extract username from token claims
-    username: str | None = payload.get("sub")
-    if username is None:
+    subject = payload.get("sub")
+    try:
+        user_id = int(subject) if subject is not None else None
+    except (TypeError, ValueError):
+        user_id = None
+    if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials: missing subject",
+            detail=INVALID_TOKEN_DETAIL,
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return username
+    user = await get_user_by_id(session, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is currently disabled",
+        )
+    return user

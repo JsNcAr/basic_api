@@ -111,5 +111,6 @@ async def test_user(session: AsyncSession) -> User:
 
 @pytest.fixture
 def auth_headers(test_user: User) -> dict:
-    token = create_access_token(data={"sub": test_user.username})
+    # The subject is the user id, never the username (see dependencies.py).
+    token = create_access_token(data={"sub": str(test_user.id)})
     return {"Authorization": f"Bearer {token}"}

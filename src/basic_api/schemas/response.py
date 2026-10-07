@@ -1,18 +1,21 @@
 """
-Common Pydantic schemas for pagination, filters, and API responses.
+The success envelope every JSON endpoint returns.
+
+Errors are not wrapped: they are FastAPI's default {"detail": ...} body, with a
+string for an HTTPException and a list of validation errors for a 422.
 """
 
-from typing import Optional, Generic, TypeVar
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Generic, Optional, TypeVar
 
-# Generic type for response data
+from pydantic import BaseModel, ConfigDict, Field
+
 T = TypeVar("T")
 
 
 class SuccessResponse(BaseModel, Generic[T]):
     """Generic success response wrapper."""
 
-    success: bool = Field(default=True, description="Success status")
+    success: bool = Field(default=True, description="Always true")
     data: T = Field(..., description="Response data")
     message: Optional[str] = Field(default=None, description="Optional message")
 
@@ -20,30 +23,8 @@ class SuccessResponse(BaseModel, Generic[T]):
         json_schema_extra={
             "example": {
                 "success": True,
-                "data": {"id": "123", "name": "Example"},
+                "data": {"id": 123, "username": "example"},
                 "message": "Operation completed successfully",
-            }
-        }
-    )
-
-
-class ErrorResponse(BaseModel):
-    """Error response schema."""
-
-    success: bool = Field(default=False, description="Success status (always false)")
-    error: str = Field(..., description="Error message")
-    detail: Optional[str] = Field(
-        default=None, description="Detailed error information"
-    )
-    code: Optional[str] = Field(default=None, description="Error code")
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "success": False,
-                "error": "Resource not found",
-                "detail": "Lead with people_id 'abc123' does not exist",
-                "code": "NOT_FOUND",
             }
         }
     )

@@ -1,173 +1,307 @@
 """
 Authentication utilities for OAuth2 + JWT.
 
-This module provides functions for:
-- Password verification using bcrypt
-- JWT token creation and validation
-- User authentication
+- Password hashing and verification with bcrypt over a SHA-256 pre-hash
+- JWT creation and validation
+- User authentication that takes the same time whether or not the user exists
+
+Settings are read and validated once, at import: a missing or weak secret, an
+algorithm outside the HMAC family, or too few bcrypt rounds stop the process
+before it can serve a request with a bad configuration.
 """
 
-from datetime import datetime, timedelta
-from typing import Optional
+import asyncio
 import hashlib
+import logging
+import os
+from datetime import timedelta
+from typing import Optional
 
 import bcrypt
-from jose import JWTError, jwt
-from fastapi import HTTPException, status
 from dotenv import load_dotenv
-import os
-
-from sqlmodel.ext.asyncio.session import AsyncSession
+from fastapi import HTTPException, status
+from jose import jwt
+from jose.exceptions import JOSEError
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from .schemas.user import User
+from .utils import utc_now
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
-# Load and validate JWT settings
-_value = os.getenv("JWT_SECRET_KEY")
-if not _value:
+logger = logging.getLogger(__name__)
+
+# 32 bytes is the HMAC key size the HS256 family is specified for; a shorter
+# secret weakens every token at once.
+_MIN_SECRET_BYTES = 32
+_ALLOWED_ALGORITHMS = ("HS256", "HS384", "HS512")
+_MIN_BCRYPT_ROUNDS = 12
+
+_secret = os.getenv("JWT_SECRET_KEY")
+if not _secret:
     raise RuntimeError("JWT_SECRET_KEY environment variable is required")
-JWT_SECRET_KEY: str = _value
+if len(_secret.encode("utf-8")) < _MIN_SECRET_BYTES:
+    raise RuntimeError(
+        f"JWT_SECRET_KEY must be at least {_MIN_SECRET_BYTES} bytes. Generate one "
+        "with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+    )
+JWT_SECRET_KEY: str = _secret
 
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM") or "HS256"
+if JWT_ALGORITHM not in _ALLOWED_ALGORITHMS:
+    raise RuntimeError(
+        f"JWT_ALGORITHM={JWT_ALGORITHM!r} is not one of "
+        + ", ".join(_ALLOWED_ALGORITHMS)
+    )
+
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+# Longest lifetime a client may request at login (default 7 days).
+JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv("JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES", 7 * 24 * 60)
+)
+if JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES < JWT_ACCESS_TOKEN_EXPIRE_MINUTES:
+    raise RuntimeError(
+        "JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES must be at least "
+        "JWT_ACCESS_TOKEN_EXPIRE_MINUTES."
+    )
+
+BCRYPT_ROUNDS = int(os.getenv("BCRYPT_ROUNDS", _MIN_BCRYPT_ROUNDS))
+if BCRYPT_ROUNDS < _MIN_BCRYPT_ROUNDS:
+    raise RuntimeError(
+        f"BCRYPT_ROUNDS={BCRYPT_ROUNDS} is below the minimum of {_MIN_BCRYPT_ROUNDS}."
+    )
+
+# One message for every credential failure, so a caller cannot tell an unknown
+# account from a wrong password.
+INVALID_CREDENTIALS_DETAIL = "Incorrect username or password"
+INVALID_TOKEN_DETAIL = "Could not validate credentials"
+
+
+def _prehash(password: str) -> bytes:
+    """
+    Pre-hash a password with SHA-256 before bcrypt.
+
+    bcrypt reads at most 72 bytes of input; the hex digest is always 64, so a
+    password of any length is hashed in full.
+
+    Args:
+        password: Plain text password.
+
+    Returns:
+        The 64-byte hex digest, encoded for bcrypt.
+    """
+    return hashlib.sha256(password.encode("utf-8")).hexdigest().encode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
-    Verify a plain password against a bcrypt hash.
+    Verify a password against a stored bcrypt hash.
 
-    Uses SHA-256 pre-hash + bcrypt to support arbitrarily long passwords.
-    This avoids bcrypt's 72-byte limit while maintaining security.
+    A malformed stored hash also verifies as False: bcrypt raises ValueError on
+    one, and a boolean here keeps the login path answering 401 rather than 500.
 
     Args:
-        plain_password: The plain text password to verify
-        hashed_password: The bcrypt hash to verify against
+        plain_password: The password as the user typed it.
+        hashed_password: The bcrypt hash stored for the account.
 
     Returns:
-        True if password matches, False otherwise
-    """
-    # Hash password with SHA-256 first to handle any length
-    sha256_hash = hashlib.sha256(plain_password.encode("utf-8")).hexdigest()
-    # Then verify with bcrypt (SHA-256 hex output is always 64 chars = 64 bytes)
-    hash_bytes = hashed_password.encode("utf-8")
+        True if the password matches, False if it does not or the hash is invalid.
 
-    return bcrypt.checkpw(sha256_hash.encode("utf-8"), hash_bytes)
+    Example:
+        >>> verify_password("my-password", get_password_hash("my-password"))
+        True
+    """
+    try:
+        return bcrypt.checkpw(_prehash(plain_password), hashed_password.encode("utf-8"))
+    except (ValueError, TypeError):
+        return False
+
+
+async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
+    """
+    verify_password in a worker thread.
+
+    bcrypt takes about 250 ms at 12 rounds; running it on the event loop would
+    stall every other request for that long.
+
+    Args:
+        plain_password: The password as the user typed it.
+        hashed_password: The bcrypt hash stored for the account.
+
+    Returns:
+        True if the password matches, False otherwise.
+    """
+    return await asyncio.to_thread(verify_password, plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
     """
-    Hash a password using bcrypt.
-
-    Uses SHA-256 pre-hash + bcrypt to support arbitrarily long passwords.
-    This avoids bcrypt's 72-byte limit while maintaining security.
+    Hash a password with bcrypt at BCRYPT_ROUNDS over the SHA-256 pre-hash.
 
     Args:
-        password: Plain text password to hash
+        password: Plain text password.
 
     Returns:
-        Bcrypt hash of the password
+        The bcrypt hash as a string, ready to store.
 
     Example:
-        >>> hash = get_password_hash("my-secure-password")
-        >>> print(hash)
-        $2b$12$...
+        >>> get_password_hash("my-password")
+        '$2b$12$...'
     """
-    # Hash password with SHA-256 first to handle any length
-    sha256_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
-    # Then hash with bcrypt (SHA-256 hex output is always 64 chars = 64 bytes)
-    salt = bcrypt.gensalt(rounds=12)
-    hashed = bcrypt.hashpw(sha256_hash.encode("utf-8"), salt)
+    salt = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
+    return bcrypt.hashpw(_prehash(password), salt).decode("utf-8")
 
-    # Return as string
-    return hashed.decode("utf-8")
+
+async def get_password_hash_async(password: str) -> str:
+    """
+    get_password_hash in a worker thread, for the same reason as
+    verify_password_async.
+
+    Args:
+        password: Plain text password.
+
+    Returns:
+        The bcrypt hash as a string.
+    """
+    return await asyncio.to_thread(get_password_hash, password)
+
+
+# A real hash to verify against when the account does not exist, so that path
+# costs the same as a real verification and timing cannot reveal which it was.
+_DUMMY_PASSWORD_HASH: str = get_password_hash("_constant_time_sentinel_")
+
+
+def access_token_lifetime(requested: Optional[timedelta] = None) -> timedelta:
+    """
+    The lifetime a login token actually gets.
+
+    The client may ask; the server decides. No request, or a zero or negative
+    one, gets the default. Anything above the maximum is capped.
+
+    Args:
+        requested: The lifetime the client asked for, or None.
+
+    Returns:
+        The lifetime to grant, between the default and the configured maximum.
+
+    Example:
+        >>> access_token_lifetime(timedelta(days=365)) == timedelta(days=7)
+        True
+    """
+    default = timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+    maximum = timedelta(minutes=JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES)
+    if requested is None or requested <= timedelta(0):
+        return default
+    return min(requested, maximum)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """
-    Create a JWT access token.
+    Create a signed JWT with the given claims plus `iat` and `exp`.
+
+    `data` must carry `sub`, the user's id as a string. The id rather than the
+    username, because a username can be released by a deletion and taken by a
+    new account; an id never comes back.
 
     Args:
-        data: Dictionary of claims to encode in the token (e.g., {"sub": "username"})
-        expires_delta: Optional custom expiration time. If not provided, uses
-            default from settings.
+        data: Claims to encode, including "sub".
+        expires_delta: Lifetime of the token; the configured default if None.
 
     Returns:
-        Encoded JWT token string
+        The encoded JWT.
 
     Example:
-        >>> token = create_access_token({"sub": "admin"})
-        >>> print(token)
-        eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        >>> create_access_token({"sub": "42"})
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
     """
-    to_encode = data.copy()
-
-    # Set expiration time
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)  # Default 15 minutes
-
-    to_encode.update({"exp": expire, "iat": datetime.utcnow()})
-
-    # Encode JWT
-    encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
-
-    return encoded_jwt
+    now = utc_now()
+    lifetime = expires_delta or timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode = {**data, "iat": now, "exp": now + lifetime}
+    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 
 def decode_access_token(token: str) -> dict:
     """
-    Decode and validate a JWT access token.
+    Decode and validate a JWT, returning its claims.
 
     Args:
-        token: JWT token string to decode
+        token: The encoded JWT from the Authorization header.
 
     Returns:
-        Dictionary of claims from the token
+        The token's claims.
 
     Raises:
-        HTTPException: If token is invalid or expired (401 Unauthorized)
+        HTTPException: 401 with one fixed message for every failure. The reason
+            (expired, bad signature, malformed) goes to the log, not to the
+            caller, so it cannot be used to probe the server.
     """
-
     try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        return payload
-    except JWTError as e:
+        return jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except JOSEError as e:
+        logger.debug("Rejected token: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Could not validate credentials: {str(e)}",
+            detail=INVALID_TOKEN_DETAIL,
             headers={"WWW-Authenticate": "Bearer"},
         )
 
 
 async def authenticate_user(
     session: AsyncSession, identifier: str, password: str
-) -> Optional[User]:
+) -> User:
     """
-    Authenticate a user by verifying identifier (username/email/phone) and password.
+    Authenticate by username, email or phone number plus password.
+
+    Takes the same time whether or not the identifier matches an account: the
+    password is always verified, against the account's hash or the sentinel.
 
     Args:
-        session: Database session
-        identifier: Username, email, or phone number
-        password: Plain text password to verify
+        session: Database session.
+        identifier: Username, email address or phone number.
+        password: Plain text password.
 
     Returns:
-        User object if authentication successful, None otherwise
+        The authenticated User.
+
+    Raises:
+        HTTPException: 401 for an unknown identifier or a wrong password, with
+            the same message for both; 403 when the credentials are correct but
+            the account is disabled, raised only after the password checked out.
     """
-    # Try to find user by username, email, or phone number
     statement = select(User).where(
         (User.username == identifier)
         | (User.email == identifier)
         | (User.phone_number == identifier)
     )
-    result = await session.exec(statement)
-    user = result.first()
+    user = (await session.exec(statement)).first()
 
-    if not user:
-        return None
+    target_hash = user.hashed_password if user else _DUMMY_PASSWORD_HASH
+    is_valid = await verify_password_async(password, target_hash)
 
-    if not verify_password(password, user.hashed_password):
-        return None
-
+    if user is None or not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=INVALID_CREDENTIALS_DETAIL,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account is currently disabled",
+        )
     return user
+
+
+async def get_user_by_id(session: AsyncSession, user_id: int) -> Optional[User]:
+    """
+    Load a user by primary key.
+
+    Args:
+        session: Database session.
+        user_id: The user's id, as carried in the token subject.
+
+    Returns:
+        The User, or None if no row has that id.
+    """
+    return await session.get(User, user_id)

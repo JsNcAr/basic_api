@@ -1,26 +1,21 @@
 """
-Schemas package: imports for common, user, and base schemas.
+Schemas package: user models and the response envelope.
 """
 
-from .base import BaseSchema
+from .response import SuccessResponse
 from .user import (
-    UserBase,
     User,
+    UserBase,
     UserCreateSchema,
-    UserUpdateSchema,
     UserResponseSchema,
-    UserLoginSchema,
+    UserUpdateSchema,
 )
-from .response import SuccessResponse, ErrorResponse
 
 __all__ = [
-    "BaseSchema",
-    "UserBase",
-    "User",
-    "UserCreateSchema",
-    "UserUpdateSchema",
-    "UserResponseSchema",
-    "UserLoginSchema",
     "SuccessResponse",
-    "ErrorResponse",
+    "User",
+    "UserBase",
+    "UserCreateSchema",
+    "UserResponseSchema",
+    "UserUpdateSchema",
 ]

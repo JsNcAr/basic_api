@@ -34,8 +34,9 @@ env:
   DB_HOST: localhost
   DB_PORT: "5432"
   TEST_DB_NAME: ci_test_db
-  # The app refuses to import without these two; any value works in CI.
-  JWT_SECRET_KEY: ci-only-not-a-secret
+  # The app refuses to import without these two; the secret must be at least
+  # 32 bytes (auth.py checks), otherwise any value works in CI.
+  JWT_SECRET_KEY: ci-only-not-a-secret-but-at-least-32-bytes-long
   API_KEY: ci-only-not-a-secret
 
 jobs:
