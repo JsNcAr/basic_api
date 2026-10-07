@@ -1,0 +1,19 @@
+# Dependabot proposes version bumps as pull requests; CI (lint, pip-audit, the
+# suite) is the check. Ranges in pyproject.toml are open to the next major, so a
+# bump only touches poetry.lock unless it crosses a major.
+version: 2
+updates:
+  - package-ecosystem: "pip" # reads pyproject.toml and poetry.lock
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # One PR for all minor and patch bumps; majors arrive one PR each so the
+    # release notes get read.
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+    open-pull-requests-limit: 5
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

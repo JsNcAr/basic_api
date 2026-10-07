@@ -53,6 +53,9 @@ jobs:
       - run: poetry run black --check ${{ env.CODE_PATHS }}
       - run: poetry run flake8 ${{ env.CODE_PATHS }}
       - run: poetry run mypy
+      # Known vulnerabilities in the installed dependencies; the project's own
+      # package is editable and not on PyPI, so it is skipped rather than failed.
+      - run: poetry run pip-audit --progress-spinner off --skip-editable
 
   test:
     runs-on: ubuntu-latest
