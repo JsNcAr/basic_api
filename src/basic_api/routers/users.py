@@ -23,11 +23,25 @@ async def create_user(
     """
     Register a user.
 
+    Args:
+        user_create: Registration payload; `username` and `password` required.
+        session: Database session.
+
+    Returns:
+        SuccessResponse[UserResponseSchema]: The stored user, never the hash.
+
     Raises:
-        409 naming the field that is already taken (username, email or phone);
-        a 409 with a generic message if two registrations race past the checks
-        and the database's unique constraint decides; 500, logged, for anything
-        else. The response never carries the database's error text.
+        HTTPException: 409 naming the field that is already taken (username,
+            email or phone); a 409 with a generic message if two registrations
+            race past the checks and the database's unique constraint decides;
+            500, logged, for anything else. The response never carries the
+            database's error text.
+
+    Example:
+        curl -X POST http://localhost:8000/api/users/ \
+             -H "X-API-Key: your-api-key" \
+             -H "Content-Type: application/json" \
+             -d '{"username": "alice", "email": "alice@example.com", "password": "..."}'
     """
     taken = (
         (User.username, user_create.username, "Username is already taken"),

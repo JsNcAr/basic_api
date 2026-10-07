@@ -79,7 +79,18 @@ INVALID_TOKEN_DETAIL = "Could not validate credentials"
 
 
 def _prehash(password: str) -> bytes:
-    """SHA-256 the password first so bcrypt always sees 64 bytes, never 72+."""
+    """
+    Pre-hash a password with SHA-256 before bcrypt.
+
+    bcrypt reads at most 72 bytes of input; the hex digest is always 64, so a
+    password of any length is hashed in full.
+
+    Args:
+        password: Plain text password.
+
+    Returns:
+        The 64-byte hex digest, encoded for bcrypt.
+    """
     return hashlib.sha256(password.encode("utf-8")).hexdigest().encode("utf-8")
 
 
@@ -87,9 +98,19 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a password against a stored bcrypt hash.
 
-    Returns False for a wrong password and also for a malformed stored hash:
-    bcrypt raises ValueError on one, and a boolean here keeps the login path
-    answering 401 rather than 500.
+    A malformed stored hash also verifies as False: bcrypt raises ValueError on
+    one, and a boolean here keeps the login path answering 401 rather than 500.
+
+    Args:
+        plain_password: The password as the user typed it.
+        hashed_password: The bcrypt hash stored for the account.
+
+    Returns:
+        True if the password matches, False if it does not or the hash is invalid.
+
+    Example:
+        >>> verify_password("my-password", get_password_hash("my-password"))
+        True
     """
     try:
         return bcrypt.checkpw(_prehash(plain_password), hashed_password.encode("utf-8"))
@@ -98,18 +119,51 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
-    """verify_password off the event loop: bcrypt takes ~250 ms at 12 rounds."""
+    """
+    verify_password in a worker thread.
+
+    bcrypt takes about 250 ms at 12 rounds; running it on the event loop would
+    stall every other request for that long.
+
+    Args:
+        plain_password: The password as the user typed it.
+        hashed_password: The bcrypt hash stored for the account.
+
+    Returns:
+        True if the password matches, False otherwise.
+    """
     return await asyncio.to_thread(verify_password, plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password with bcrypt at BCRYPT_ROUNDS over the SHA-256 pre-hash."""
+    """
+    Hash a password with bcrypt at BCRYPT_ROUNDS over the SHA-256 pre-hash.
+
+    Args:
+        password: Plain text password.
+
+    Returns:
+        The bcrypt hash as a string, ready to store.
+
+    Example:
+        >>> get_password_hash("my-password")
+        '$2b$12$...'
+    """
     salt = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
     return bcrypt.hashpw(_prehash(password), salt).decode("utf-8")
 
 
 async def get_password_hash_async(password: str) -> str:
-    """get_password_hash off the event loop."""
+    """
+    get_password_hash in a worker thread, for the same reason as
+    verify_password_async.
+
+    Args:
+        password: Plain text password.
+
+    Returns:
+        The bcrypt hash as a string.
+    """
     return await asyncio.to_thread(get_password_hash, password)
 
 
@@ -124,6 +178,16 @@ def access_token_lifetime(requested: Optional[timedelta] = None) -> timedelta:
 
     The client may ask; the server decides. No request, or a zero or negative
     one, gets the default. Anything above the maximum is capped.
+
+    Args:
+        requested: The lifetime the client asked for, or None.
+
+    Returns:
+        The lifetime to grant, between the default and the configured maximum.
+
+    Example:
+        >>> access_token_lifetime(timedelta(days=365)) == timedelta(days=7)
+        True
     """
     default = timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
     maximum = timedelta(minutes=JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -139,6 +203,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     `data` must carry `sub`, the user's id as a string. The id rather than the
     username, because a username can be released by a deletion and taken by a
     new account; an id never comes back.
+
+    Args:
+        data: Claims to encode, including "sub".
+        expires_delta: Lifetime of the token; the configured default if None.
+
+    Returns:
+        The encoded JWT.
+
+    Example:
+        >>> create_access_token({"sub": "42"})
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
     """
     now = utc_now()
     lifetime = expires_delta or timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -150,9 +225,16 @@ def decode_access_token(token: str) -> dict:
     """
     Decode and validate a JWT, returning its claims.
 
+    Args:
+        token: The encoded JWT from the Authorization header.
+
+    Returns:
+        The token's claims.
+
     Raises:
-        HTTPException 401 with one fixed message for every failure. The reason
-        (expired, bad signature, malformed) goes to the log, not to the caller.
+        HTTPException: 401 with one fixed message for every failure. The reason
+            (expired, bad signature, malformed) goes to the log, not to the
+            caller, so it cannot be used to probe the server.
     """
     try:
         return jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
@@ -174,9 +256,18 @@ async def authenticate_user(
     Takes the same time whether or not the identifier matches an account: the
     password is always verified, against the account's hash or the sentinel.
 
+    Args:
+        session: Database session.
+        identifier: Username, email address or phone number.
+        password: Plain text password.
+
+    Returns:
+        The authenticated User.
+
     Raises:
-        HTTPException 401: unknown identifier or wrong password, same message.
-        HTTPException 403: credentials correct but the account is disabled.
+        HTTPException: 401 for an unknown identifier or a wrong password, with
+            the same message for both; 403 when the credentials are correct but
+            the account is disabled, raised only after the password checked out.
     """
     statement = select(User).where(
         (User.username == identifier)
@@ -203,5 +294,14 @@ async def authenticate_user(
 
 
 async def get_user_by_id(session: AsyncSession, user_id: int) -> Optional[User]:
-    """The user with this id, or None."""
+    """
+    Load a user by primary key.
+
+    Args:
+        session: Database session.
+        user_id: The user's id, as carried in the token subject.
+
+    Returns:
+        The User, or None if no row has that id.
+    """
     return await session.get(User, user_id)

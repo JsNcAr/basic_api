@@ -23,6 +23,15 @@ def validate_http_url(value: Optional[str]) -> Optional[str]:
 
     Applied at registration so that a javascript: or data: URL cannot be stored
     and later rendered as a link by a web client.
+
+    Args:
+        value: The URL as sent, or None.
+
+    Returns:
+        The URL as a normalised string, or None.
+
+    Raises:
+        ValueError: If the value is not an http or https URL.
     """
     if value is None:
         return None

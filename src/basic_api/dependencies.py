@@ -28,9 +28,21 @@ async def get_current_user(
     is the user id, so a username released by a deletion and taken by a new
     account can never make an old token resolve to the new user.
 
+    Args:
+        token: Bearer token from the Authorization header (injected).
+        session: Database session (injected).
+
+    Returns:
+        The User the token belongs to.
+
     Raises:
-        HTTPException 401: token invalid, subject not an id, or user gone.
-        HTTPException 403: user exists but is disabled.
+        HTTPException: 401 when the token is invalid, its subject is not an id,
+            or the user no longer exists; 403 when the user is disabled.
+
+    Example:
+        @router.get("/mine")
+        async def mine(current_user: Annotated[User, Depends(get_current_user)]):
+            return {"username": current_user.username}
     """
     payload = decode_access_token(token)
     subject = payload.get("sub")

@@ -22,6 +22,18 @@ async def get_current_user_info(
     """
     The authenticated user, as stored.
 
+    Args:
+        current_user: The User the bearer token belongs to (injected).
+
+    Returns:
+        SuccessResponse[UserResponseSchema]: The user's profile fields, never
+            the password hash
+            {
+                "success": true,
+                "message": "User retrieved successfully",
+                "data": {"id": 1, "username": "alice", "email": "...", ...}
+            }
+
     Example:
         curl http://localhost:8000/api/auth/me \\
              -H "X-API-Key: your-api-key" \\
@@ -37,6 +49,18 @@ async def logout(current_user: Annotated[User, Depends(get_current_user)]):
     """
     Confirm a logout. Tokens are stateless, so the client deletes its copy;
     nothing is invalidated server-side (see docs/known_issues.md).
+
+    Args:
+        current_user: The User the bearer token belongs to (injected); a valid
+            token is required so that only a logged-in client can "log out".
+
+    Returns:
+        SuccessResponse[None]: Confirmation
+            {
+                "success": true,
+                "message": "Logout successful. Please delete your token client-side.",
+                "data": null
+            }
 
     Example:
         curl -X POST http://localhost:8000/api/auth/logout \\

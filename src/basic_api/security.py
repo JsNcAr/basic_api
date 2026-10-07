@@ -30,9 +30,19 @@ async def verify_api_key(x_api_key: str | None = Security(api_key_header)) -> st
     """
     Dependency for routes that require the client API key.
 
+    Args:
+        x_api_key: Value of the X-API-Key header, or None when absent (injected).
+
+    Returns:
+        The key, so a route can depend on it like any other value.
+
     Raises:
-        HTTPException 500: no key configured on the server (fail closed).
-        HTTPException 401: header missing or not equal to the configured key.
+        HTTPException: 500 when no key is configured on the server (fail closed);
+            401 when the header is missing or does not equal the configured key.
+
+    Example:
+        @router.get("/things", dependencies=[Depends(verify_api_key)])
+        async def list_things(): ...
     """
     if not API_KEY:
         raise HTTPException(

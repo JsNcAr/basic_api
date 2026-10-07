@@ -60,7 +60,12 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    """Service banner. Public."""
+    """
+    Service banner. Public: needs neither API key nor token.
+
+    Returns:
+        dict: Service name, version, status and a hint on how to authenticate.
+    """
     return {
         "message": "Basic API",
         "version": "0.1.0",
@@ -71,7 +76,12 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check for monitoring. Public, so a monitor needs no credentials."""
+    """
+    Health check for monitoring. Public, so a monitor needs no credentials.
+
+    Returns:
+        dict: {"status": "healthy", "service": <name>}
+    """
     return {"status": "healthy", "service": "leads-frontend-api"}
 
 
@@ -94,12 +104,28 @@ async def login(
 
     `username` may be a username, an email address or a phone number.
 
+    Args:
+        form_data: OAuth2 password form with `username` and `password` fields.
+        expires_delta: Requested token lifetime (query parameter); the server
+            caps it, see access_token_lifetime.
+        session: Database session.
+
     Returns:
-        {"access_token": "...", "expires_in": <seconds>, "token_type": "bearer"}
+        dict: Access token, granted lifetime and token type
+            {
+                "access_token": "eyJ...",
+                "expires_in": 1800,
+                "token_type": "bearer"
+            }
 
     Raises:
-        401 for an unknown identifier or a wrong password, with one message for
-        both; 403 for a disabled account.
+        HTTPException: 401 for an unknown identifier or a wrong password, with
+            one message for both; 403 for a disabled account.
+
+    Example:
+        curl -X POST http://localhost:8000/token \
+             -H "Content-Type: application/x-www-form-urlencoded" \
+             -d "username=user@example.com&password=your-password"
     """
     user = await authenticate_user(session, form_data.username, form_data.password)
     lifetime = access_token_lifetime(expires_delta)
@@ -119,6 +145,18 @@ async def protected_example(
     """
     Example of a route that needs both the client API key and a user token.
     Copy its signature to protect a new route the same way.
+
+    Args:
+        current_user: The User the bearer token belongs to (injected).
+        api_key: The verified client API key (injected).
+
+    Returns:
+        dict: A greeting naming the authenticated user.
+
+    Example:
+        curl http://localhost:8000/protected-example \
+             -H "X-API-Key: your-api-key" \
+             -H "Authorization: Bearer eyJ..."
     """
     return {
         "message": f"Hello {current_user.username}! This is a protected endpoint.",
