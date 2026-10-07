@@ -79,7 +79,7 @@ async def session() -> AsyncGenerator[AsyncSession, None]:
 
     async with async_session_maker() as cleanup:
         for table in reversed(SQLModel.metadata.sorted_tables):
-            await cleanup.execute(table.delete())
+            await cleanup.exec(table.delete())
         await cleanup.commit()
 
 
