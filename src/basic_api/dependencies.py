@@ -48,7 +48,7 @@ async def get_current_user(
     subject = payload.get("sub")
     try:
         user_id = int(subject) if subject is not None else None
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         user_id = None
     if user_id is None:
         raise HTTPException(

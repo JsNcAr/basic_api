@@ -6,7 +6,7 @@ authors = [
     {name = "JsNcAr",email = "jn.arias@uniandes.edu.co"}
 ]
 readme = "README.md"
-requires-python = ">=3.13,<4.0"
+requires-python = ">=3.14,<4.0"
 # Ranges are open to the next major: poetry.lock is the exact pin, Dependabot
 # proposes bumps, CI is the check. Update with `poetry update` and the suite.
 dependencies = [
@@ -47,12 +47,12 @@ dev = [
 [tool.black]
 line-length = 88
 # Keep in step with requires-python above.
-target-version = ["py313"]
+target-version = ["py314"]
 
 # `poetry run mypy src`; CI runs it in the lint job.
 [tool.mypy]
 # Keep python_version in step with requires-python; files follows the src/ layout.
-python_version = "3.13"
+python_version = "3.14"
 files = ["src"]
 plugins = ["pydantic.mypy"]
 check_untyped_defs = true
