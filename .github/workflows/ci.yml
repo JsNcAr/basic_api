@@ -1,0 +1,56 @@
+# Lint and tests on every push and pull request.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install "poetry==2.2.1"
+      - run: poetry install --no-interaction
+      - run: poetry run black --check src tests
+      - run: poetry run flake8 src tests
+      - run: poetry run mypy src
+        env:
+          JWT_SECRET_KEY: ci-only-not-a-secret
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: basic_api
+          POSTGRES_PASSWORD: basic_api
+          POSTGRES_DB: basic_api_test_db
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U basic_api"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # A throwaway database for this job; none of these are secrets.
+      DB_USER: basic_api
+      DB_PASSWORD: basic_api
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      TEST_DB_NAME: basic_api_test_db
+      JWT_SECRET_KEY: ci-only-not-a-secret
+      API_KEY: test-api-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install "poetry==2.2.1"
+      - run: poetry install --no-interaction
+      - run: poetry run pytest
