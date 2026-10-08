@@ -59,7 +59,7 @@ async def test_auth_me_returns_the_stored_user(client, auth_headers, test_user):
     response = await client.get("/api/auth/me", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["id"] == test_user.id
+    assert data["id"] == str(test_user.id)
     assert data["username"] == "testuser"
     assert data["email"] == "test@example.com"
     assert "role" not in data

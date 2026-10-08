@@ -2,6 +2,7 @@
 FastAPI dependencies for authentication.
 """
 
+import uuid
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -25,7 +26,7 @@ async def get_current_user(
 
     Loading the user on every request is what makes deletion and deactivation
     take effect at once, instead of when the token expires. The subject claim
-    is the user id, so a username released by a deletion and taken by a new
+    is the user's UUID, so a username released by a deletion and taken by a new
     account can never make an old token resolve to the new user.
 
     Args:
@@ -47,8 +48,8 @@ async def get_current_user(
     payload = decode_access_token(token)
     subject = payload.get("sub")
     try:
-        user_id = int(subject) if subject is not None else None
-    except TypeError, ValueError:
+        user_id = uuid.UUID(subject) if subject is not None else None
+    except TypeError, ValueError, AttributeError:
         user_id = None
     if user_id is None:
         raise HTTPException(

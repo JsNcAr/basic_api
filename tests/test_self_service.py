@@ -20,7 +20,7 @@ async def test_read_me_returns_the_profile_without_the_hash(
     response = await client.get(ME, headers=auth_headers)
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["id"] == test_user.id
+    assert data["id"] == str(test_user.id)
     assert data["username"] == "testuser"
     assert "hashed_password" not in data
 
