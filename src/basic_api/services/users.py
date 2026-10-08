@@ -6,6 +6,7 @@ router is one call and one translation of exceptions to status codes.
 """
 
 import logging
+import uuid
 from typing import Optional
 
 from sqlalchemy.exc import IntegrityError
@@ -37,7 +38,7 @@ _RACE_MESSAGE = "A user with this username, email, or phone number already exist
 async def _assert_identifiers_free(
     session: AsyncSession,
     values: dict[str, Optional[str]],
-    exclude_user_id: Optional[int] = None,
+    exclude_user_id: Optional[uuid.UUID] = None,
 ) -> None:
     """
     Raise IdentifierTakenError if any given identifier belongs to another account.

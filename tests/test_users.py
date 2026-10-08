@@ -68,3 +68,18 @@ async def test_the_response_has_no_legacy_fields(client):
     data = (await register(client)).json()["data"]
     for legacy in ("bluetooth_address", "wifi_mac_address", "is_deleted"):
         assert legacy not in data
+
+
+async def test_ids_are_version_7_uuids_ordered_by_creation(client):
+    import uuid
+
+    first = uuid.UUID((await register(client)).json()["data"]["id"])
+    second = uuid.UUID(
+        (
+            await register(client, username="later", email=None, phone_number=None)
+        ).json()["data"]["id"]
+    )
+    # Version 7 is time-ordered (RFC 9562), so a later account sorts after an
+    # earlier one, and nothing about the value says how many accounts exist.
+    assert first.version == second.version == 7
+    assert first != second and first < second

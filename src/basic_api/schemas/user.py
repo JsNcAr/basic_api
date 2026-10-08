@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from typing import Optional
 
@@ -80,7 +81,11 @@ class UserBase(SQLModel):
 class User(UserBase, table=True):
     __tablename__ = "users"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    # UUIDv7 (Python 3.14, RFC 9562) rather than an auto-increment integer: ids
+    # no longer reveal how many accounts exist or in what order they were made
+    # to anyone who sees one, and uuid7 is time-ordered, so the primary-key
+    # index still appends at the end instead of scattering like uuid4 would.
+    id: uuid.UUID = Field(default_factory=uuid.uuid7, primary_key=True)
     hashed_password: str = Field(description="bcrypt hash of the SHA-256 pre-hash")
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: Optional[datetime] = Field(
@@ -128,6 +133,6 @@ class UserDeleteSchema(SQLModel):
 
 # 7. User as returned by the API: never the hash.
 class UserResponseSchema(UserBase):
-    id: int
+    id: uuid.UUID
     created_at: datetime
     updated_at: Optional[datetime] = None

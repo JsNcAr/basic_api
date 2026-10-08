@@ -29,6 +29,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
 - `cryptography` 46.0.3 to 50.0.2, closing seven published advisories (#7).
 
 ### Changed
+- Users are identified by UUIDv7 (`uuid.uuid7()`, new in Python 3.14) instead
+  of an auto-increment integer: `id` in every response and the token subject is
+  now a UUID string. Ids no longer reveal how many accounts exist, and uuid7 is
+  time-ordered so the primary-key index stays append-friendly. **Breaking for an
+  existing database**: the `users.id` column type changes and `create_all` does
+  not convert columns; migrate before upgrading a deployment with data (#12).
 - Python 3.14: `.python-version` says `3.14`, `requires-python` is
   `>=3.14,<4.0`, Black targets `py314` and mypy checks against 3.14. Every
   dependency in the lock ships a 3.14 wheel or is pure Python, so no package is

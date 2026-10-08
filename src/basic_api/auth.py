@@ -13,6 +13,7 @@ the process before it can serve a request with a bad configuration.
 import asyncio
 import hashlib
 import logging
+import uuid
 from datetime import timedelta
 from typing import Optional
 
@@ -163,9 +164,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """
     Create a signed JWT with the given claims plus `iat` and `exp`.
 
-    `data` must carry `sub`, the user's id as a string. The id rather than the
-    username, because a username can be released by a deletion and taken by a
-    new account; an id never comes back.
+    `data` must carry `sub`, the user's UUID as a string. The id rather than
+    the username, because a username can be released by a deletion and taken
+    by a new account; an id never comes back.
 
     Args:
         data: Claims to encode, including "sub".
@@ -256,13 +257,13 @@ async def authenticate_user(
     return user
 
 
-async def get_user_by_id(session: AsyncSession, user_id: int) -> Optional[User]:
+async def get_user_by_id(session: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
     """
     Load a user by primary key.
 
     Args:
         session: Database session.
-        user_id: The user's id, as carried in the token subject.
+        user_id: The user's UUID, as carried in the token subject.
 
     Returns:
         The User, or None if no row has that id.

@@ -45,7 +45,7 @@ default) the request is capped; omitted, zero or negative gets the default.
 
 ### What is in the token
 
-The subject (`sub`) is the **user id**, plus `iat` and `exp`. On every request
+The subject (`sub`) is the **user's UUID**, plus `iat` and `exp`. On every request
 `get_current_user` loads the user by id and checks `is_active`, so:
 
 - a deleted account's tokens are refused on the next request (`401 User not found`);

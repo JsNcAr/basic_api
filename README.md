@@ -11,7 +11,7 @@ configuration right. That work is done here, tested, and documented.
 
 ## Features
 
-- OAuth2 password flow with JWT bearer tokens; the token subject is the user id,
+- OAuth2 password flow with JWT bearer tokens; the token subject is the user's UUIDv7,
   so a deleted or disabled account loses access on the next request
 - Flexible login: the `username` form field accepts a username, an email address
   or a phone number
