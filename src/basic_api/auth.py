@@ -201,7 +201,15 @@ def decode_access_token(token: str) -> dict:
             caller, so it cannot be used to probe the server.
     """
     try:
-        return jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        return jwt.decode(
+            token,
+            JWT_SECRET_KEY,
+            algorithms=[JWT_ALGORITHM],
+            # PyJWT's own key-length rule as an error, not a warning: a second
+            # line behind the startup check in config.py, in case a key ever
+            # reaches here another way.
+            options={"enforce_minimum_key_length": True},
+        )
     except PyJWTError as e:
         logger.debug("Rejected token: %s", e)
         raise HTTPException(

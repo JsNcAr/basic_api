@@ -136,22 +136,48 @@ API_KEY: str = _required("API_KEY")
 
 # 32 bytes is the HMAC key size the HS256 family is specified for; a shorter
 # secret weakens every token at once.
-_MIN_SECRET_BYTES = 32
 _ALLOWED_ALGORITHMS = ("HS256", "HS384", "HS512")
+# RFC 7518 section 3.2: an HMAC key should be at least as long as the hash it
+# drives. PyJWT 2.15 checks the same rule at sign and verify time.
+_SECRET_MINIMUM_BYTES = {"HS256": 32, "HS384": 48, "HS512": 64}
 _MIN_BCRYPT_ROUNDS = 12
 
-JWT_SECRET_KEY: str = _required("JWT_SECRET_KEY")
-if len(JWT_SECRET_KEY.encode("utf-8")) < _MIN_SECRET_BYTES:
-    raise RuntimeError(
-        f"JWT_SECRET_KEY must be at least {_MIN_SECRET_BYTES} bytes. Generate one "
-        "with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
-    )
+
+def minimum_secret_bytes(algorithm: str) -> int:
+    """
+    The shortest JWT_SECRET_KEY the given HMAC algorithm should run with.
+
+    Args:
+        algorithm: One of HS256, HS384, HS512.
+
+    Returns:
+        The hash output size in bytes: 32, 48 or 64.
+
+    Raises:
+        ValueError: The algorithm is not one this API allows.
+    """
+    try:
+        return _SECRET_MINIMUM_BYTES[algorithm]
+    except KeyError:
+        raise ValueError(
+            f"{algorithm!r} is not one of " + ", ".join(_ALLOWED_ALGORITHMS)
+        )
+
 
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM") or "HS256"
 if JWT_ALGORITHM not in _ALLOWED_ALGORITHMS:
     raise RuntimeError(
         f"JWT_ALGORITHM={JWT_ALGORITHM!r} is not one of "
         + ", ".join(_ALLOWED_ALGORITHMS)
+    )
+
+JWT_SECRET_KEY: str = _required("JWT_SECRET_KEY")
+_minimum = minimum_secret_bytes(JWT_ALGORITHM)
+if len(JWT_SECRET_KEY.encode("utf-8")) < _minimum:
+    raise RuntimeError(
+        f"JWT_SECRET_KEY must be at least {_minimum} bytes for {JWT_ALGORITHM} "
+        "(RFC 7518 section 3.2). Generate one with: python -c 'import secrets; "
+        f"print(secrets.token_urlsafe({_minimum}))'"
     )
 
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES = _int("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 30)

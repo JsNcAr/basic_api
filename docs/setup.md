@@ -32,7 +32,7 @@ with a comment; the table below is the summary.
 |---|---|---|---|
 | `DATABASE_URL` | yes | | `postgresql+asyncpg://user:password@host:5432/dbname` |
 | `API_KEY` | yes | | Client API key sent as `X-API-Key` on `/api` routes |
-| `JWT_SECRET_KEY` | yes | | At least 32 bytes. `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `JWT_SECRET_KEY` | yes | | At least 32 bytes for HS256, 48 for HS384, 64 for HS512. `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
 | `JWT_ALGORITHM` | | `HS256` | One of `HS256`, `HS384`, `HS512` |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | | `30` | Default token lifetime |
 | `JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES` | | `10080` (7 days) | Longest lifetime a client may request with `?expires_delta=`; must be at least the default |
@@ -131,3 +131,16 @@ Everything a new project renames or changes, in one list:
    `SERVICE_NAME` returned by `/health`.
 5. **Configuration**: add a variable in `config.py` and `.env.example` together.
 6. **Docs**: this folder and the README.
+
+## Debugging a hung process
+
+Python 3.14 can show what an asyncio program is waiting on, from outside the
+process and without stopping it:
+
+```bash
+python -m asyncio ps <pid>       # one line per task: id, name, coroutine stack
+python -m asyncio pstree <pid>   # the same as an await tree
+```
+
+Point it at the uvicorn worker's pid. A task stuck on a database call or a lock
+shows up with its full await chain; that is usually enough to name the culprit.
