@@ -34,7 +34,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
   now a UUID string. Ids no longer reveal how many accounts exist, and uuid7 is
   time-ordered so the primary-key index stays append-friendly. **Breaking for an
   existing database**: the `users.id` column type changes and `create_all` does
-  not convert columns; migrate before upgrading a deployment with data (#10).
+  not convert columns; migrate before upgrading a deployment with data (#12).
 - Python 3.14: `.python-version` says `3.14`, `requires-python` is
   `>=3.14,<4.0`, Black targets `py314` and mypy checks against 3.14. Every
   dependency in the lock ships a 3.14 wheel or is pure Python, so no package is
