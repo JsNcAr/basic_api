@@ -15,7 +15,9 @@ every path with it.
 a fixed shape).
 
 **Errors** are FastAPI's default body: `detail` holding a string, or a list of
-validation errors for `422`.
+validation errors for `422`. Every status a route can answer is declared in the
+OpenAPI document (`/openapi.json`), so generated clients see them; the one
+exception is `413`, which Starlette answers as plain text before the app runs.
 
 ```json
 {"detail": "Not a valid request"}
@@ -67,6 +69,7 @@ There is no user listing and no read-by-id.
 | `401` | Missing or invalid API key; missing, invalid or orphaned token; bad login |
 | `403` | Account disabled |
 | `409` | Username, email or phone number already in use |
+| `413` | Request body over `MAX_REQUEST_BODY_BYTES` (1 MiB by default); plain-text body, answered before the route |
 | `422` | Body or form fails validation (lengths, URL rule, required fields) |
 | `429` | Rate limit; see `Retry-After` |
 | `500` | Unexpected failure, logged server-side with a generic message |

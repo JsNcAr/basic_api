@@ -171,6 +171,15 @@ if BCRYPT_ROUNDS < _MIN_BCRYPT_ROUNDS:
         f"BCRYPT_ROUNDS={BCRYPT_ROUNDS} is below the minimum of {_MIN_BCRYPT_ROUNDS}."
     )
 
+# --- Request size --------------------------------------------------------------
+# Largest request body accepted, in bytes; over it the answer is 413 before the
+# route runs. 1 MiB is far above any body this API defines and stops a client
+# from streaming megabytes into a profile field. Enforced by Starlette's
+# RequestBodyLimitMiddleware in main.py.
+MAX_REQUEST_BODY_BYTES = _int("MAX_REQUEST_BODY_BYTES", 1_048_576)
+if MAX_REQUEST_BODY_BYTES < 1:
+    raise RuntimeError("MAX_REQUEST_BODY_BYTES must be a positive integer")
+
 # --- Rate limits -------------------------------------------------------------
 # slowapi/limits syntax, e.g. "10/minute", "100/hour"; validated in limiter.py.
 # Per client IP and per process (each uvicorn worker keeps its own count).

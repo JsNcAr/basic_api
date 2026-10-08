@@ -45,6 +45,7 @@ with a comment; the table below is the summary.
 | `DATABASE_ECHO` | | `false` | Log every SQL statement (development only) |
 | `RATE_LIMIT_LOGIN` | | `60/minute` | Per client IP on `POST /token` |
 | `RATE_LIMIT_REGISTER` | | `10/minute` | Per client IP on `POST /api/users/` |
+| `MAX_REQUEST_BODY_BYTES` | | `1048576` | Largest request body; larger ones get `413` before any route runs |
 | `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `TEST_DB_NAME` | tests only | `postgres`, `postgres`, `localhost`, `5432`, `basic_api_test_db` | The test database (see Testing) |
 
 ## Running

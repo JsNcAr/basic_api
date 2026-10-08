@@ -28,6 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from slowapi.errors import RateLimitExceeded
+from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .auth import access_token_lifetime, authenticate_user, create_access_token
@@ -37,12 +38,20 @@ from .config import (
     CORS_METHODS,
     CORS_ORIGINS,
     ENABLE_DOCS,
+    MAX_REQUEST_BODY_BYTES,
     ROOT_PATH,
 )
 from .database import engine, get_session, init_db, ping
 from .dependencies import get_current_user
 from .limiter import RATE_LIMIT_LOGIN, limiter, rate_limit_exceeded_handler
 from .routers import auth, users
+from .schemas.errors import error_responses
+from .schemas.system import (
+    BannerResponse,
+    GreetingResponse,
+    HealthResponse,
+    TokenResponse,
+)
 from .schemas.user import User
 from .security import verify_api_key
 
@@ -73,6 +82,13 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
+# Middleware order: each add_middleware() wraps the ones before it, so the last
+# added runs first. The body limit goes in first so that CORS, added after it,
+# is outermost and a 413 still carries CORS headers for a browser client.
+# Starlette's own `max_body_size` parameter is not forwarded by FastAPI(), hence
+# the middleware directly.
+app.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_REQUEST_BODY_BYTES)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
@@ -81,7 +97,7 @@ app.add_middleware(
 )
 
 
-@app.get("/")
+@app.get("/", response_model=BannerResponse)
 async def root():
     """
     Service banner. Public: needs neither API key nor token.
@@ -97,7 +113,11 @@ async def root():
     }
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    responses={503: {"model": HealthResponse, "description": "Database unreachable"}},
+)
 async def health_check():
     """
     Health check for monitoring. Public, so a monitor needs no credentials.
@@ -121,7 +141,11 @@ async def health_check():
     return {"status": "healthy", "service": SERVICE_NAME, "database": "ok"}
 
 
-@app.post("/token")
+@app.post(
+    "/token",
+    response_model=TokenResponse,
+    responses=error_responses(401, 403, 413, 429),
+)
 @limiter.limit(RATE_LIMIT_LOGIN)
 async def login(
     request: Request,
@@ -177,7 +201,11 @@ async def login(
     }
 
 
-@app.get("/protected-example")
+@app.get(
+    "/protected-example",
+    response_model=GreetingResponse,
+    responses=error_responses(401, 403),
+)
 async def protected_example(
     current_user: Annotated[User, Depends(get_current_user)],
     api_key: Annotated[str, Depends(verify_api_key)],
@@ -206,5 +234,18 @@ async def protected_example(
 
 # Every route under /api needs the client API key; user routes add the bearer
 # token through get_current_user themselves.
-app.include_router(auth.router, prefix="/api", dependencies=[Depends(verify_api_key)])
-app.include_router(users.router, prefix="/api", dependencies=[Depends(verify_api_key)])
+# Every route under /api needs the client API key and can answer 401 for it;
+# user routes add the bearer token through get_current_user themselves and
+# declare 403 where it applies.
+app.include_router(
+    auth.router,
+    prefix="/api",
+    dependencies=[Depends(verify_api_key)],
+    responses=error_responses(401),
+)
+app.include_router(
+    users.router,
+    prefix="/api",
+    dependencies=[Depends(verify_api_key)],
+    responses=error_responses(401),
+)

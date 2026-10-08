@@ -16,6 +16,7 @@ from ..dependencies import get_current_user
 from ..exceptions import IdentifierTakenError, PasswordVerificationError
 from ..limiter import RATE_LIMIT_REGISTER, limiter
 from ..schemas import SuccessResponse
+from ..schemas.errors import error_responses
 from ..schemas.user import (
     PasswordChangeSchema,
     User,
@@ -31,7 +32,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
-@router.post("/", response_model=SuccessResponse[UserResponseSchema], status_code=201)
+@router.post(
+    "/",
+    response_model=SuccessResponse[UserResponseSchema],
+    status_code=201,
+    responses=error_responses(409, 413, 429),
+)
 @limiter.limit(RATE_LIMIT_REGISTER)
 async def create_user(
     request: Request,
@@ -75,7 +81,11 @@ async def create_user(
     )
 
 
-@router.get("/me", response_model=SuccessResponse[UserResponseSchema])
+@router.get(
+    "/me",
+    response_model=SuccessResponse[UserResponseSchema],
+    responses=error_responses(403),
+)
 async def read_current_user(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -98,7 +108,11 @@ async def read_current_user(
     )
 
 
-@router.patch("/me", response_model=SuccessResponse[UserResponseSchema])
+@router.patch(
+    "/me",
+    response_model=SuccessResponse[UserResponseSchema],
+    responses=error_responses(403, 409, 413),
+)
 async def update_current_user(
     user_update: UserUpdateSchema,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -143,7 +157,11 @@ async def update_current_user(
     )
 
 
-@router.post("/me/change-password", response_model=SuccessResponse[None])
+@router.post(
+    "/me/change-password",
+    response_model=SuccessResponse[None],
+    responses=error_responses(400, 403, 413),
+)
 async def change_password(
     password_change: PasswordChangeSchema,
     current_user: Annotated[User, Depends(get_current_user)],
@@ -188,7 +206,11 @@ async def change_password(
     )
 
 
-@router.delete("/me", response_model=SuccessResponse[None])
+@router.delete(
+    "/me",
+    response_model=SuccessResponse[None],
+    responses=error_responses(400, 403, 413),
+)
 async def delete_current_user(
     body: UserDeleteSchema,
     current_user: Annotated[User, Depends(get_current_user)],
