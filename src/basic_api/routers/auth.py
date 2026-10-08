@@ -10,12 +10,17 @@ from fastapi import APIRouter, Depends
 
 from ..dependencies import get_current_user
 from ..schemas import SuccessResponse, UserResponseSchema
+from ..schemas.errors import error_responses
 from ..schemas.user import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.get("/me", response_model=SuccessResponse[UserResponseSchema])
+@router.get(
+    "/me",
+    response_model=SuccessResponse[UserResponseSchema],
+    responses=error_responses(403),
+)
 async def get_current_user_info(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
@@ -44,7 +49,11 @@ async def get_current_user_info(
     )
 
 
-@router.post("/logout", response_model=SuccessResponse[None])
+@router.post(
+    "/logout",
+    response_model=SuccessResponse[None],
+    responses=error_responses(403),
+)
 async def logout(current_user: Annotated[User, Depends(get_current_user)]):
     """
     Confirm a logout. Tokens are stateless, so the client deletes its copy;
