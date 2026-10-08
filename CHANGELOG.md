@@ -28,6 +28,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
   dev tools. SQLAlchemy is held at 2.0.x (`<2.1`) until 2.1 ships wheels (#7).
 - `cryptography` 46.0.3 to 50.0.2, closing seven published advisories (#7).
 
+### Added
+- Response models for `/`, `/health`, `/token` and `/protected-example`, so the
+  OpenAPI document has a schema for every response (the token response had
+  none) and FastAPI 0.130+ serialises them with pydantic-core; every status a
+  route can answer is declared (`schemas/errors.py`), so generated clients see
+  401, 403, 409, 413, 429 and 503 (#13).
+- `MAX_REQUEST_BODY_BYTES` (default 1 MiB): Starlette 1.6's
+  `RequestBodyLimitMiddleware` answers 413 before any route runs (#13).
+
 ### Changed
 - Users are identified by UUIDv7 (`uuid.uuid7()`, new in Python 3.14) instead
   of an auto-increment integer: `id` in every response and the token subject is

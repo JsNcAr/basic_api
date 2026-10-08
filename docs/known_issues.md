@@ -21,7 +21,6 @@ looks like. Remove an entry in the same change that fixes it.
 | Operations | [CI has no coverage or secret scan](#ci-has-no-coverage-or-secret-scan) | Low |
 | Operations | [No deployment story](#no-deployment-story) | Low |
 | Code | [The demo route ships](#the-demo-route-ships) | Low |
-| Code | [The OpenAPI document under-describes responses](#the-openapi-document-under-describes-responses) | Medium |
 | Code | [Startup validation and the login limit are untested](#startup-validation-and-the-login-limit-are-untested) | Low |
 | Code | [Application code detects the test runner](#application-code-detects-the-test-runner) | Low |
 | Code | [The root banner reports healthy without checking](#the-root-banner-reports-healthy-without-checking) | Low |
@@ -166,6 +165,9 @@ no metrics, no error tracking.
 
 **Fix:** configure logging at startup (JSON in production), a request-id
 middleware, and an error tracker.
+For tracing and metrics, FastAPI 0.142's native OpenTelemetry (`FastAPI(telemetry={...})`,
+with `auto_configure` reading the standard `OTEL_*` variables) is the path; it
+needs `opentelemetry-sdk` and an OTLP exporter installed to emit anything.
 
 ### CI has no coverage or secret scan
 
@@ -184,8 +186,8 @@ the repository) and `pytest-cov` with a threshold in `test`.
 
 The README calls the project production-shaped, but nothing says how to run it
 in production: no container image, no service unit, no reverse-proxy example,
-no request body size limit, no security headers, no HTTPS note. uvicorn alone
-caps none of these. The documentation left deployment out of scope on purpose;
+no security headers, no HTTPS note. (The request body limit is in the app
+since MAX_REQUEST_BODY_BYTES; the rest is the proxy's job.) The documentation left deployment out of scope on purpose;
 this entry records that so the claim and the contents agree.
 
 **Fix:** a short deployment guide with a reverse proxy that terminates TLS,
@@ -205,20 +207,6 @@ containerised.
 live in every deployment of the starter.
 
 **Fix:** delete it once a real protected route exists to point at.
-
-### The OpenAPI document under-describes responses
-
-**Where:** every route in `src/basic_api/main.py` and `src/basic_api/routers/`.
-
-No route declares `responses=`, so the generated document lists only `200`,
-`201` and `422`; the `401`, `403`, `409`, `429` and `503` paths described in
-`docs/api.md` are absent from the spec and from any client generated from it.
-`/token`, `/` and `/health` have no `response_model`, so the token response has
-no schema at all.
-
-**Fix:** a shared `responses` dictionary per auth level (API key only, API key
-plus token) passed to the decorators, and small response models for the three
-plain routes.
 
 ### Startup validation and the login limit are untested
 
