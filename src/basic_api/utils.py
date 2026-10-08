@@ -2,7 +2,7 @@
 General utility functions.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def utc_now() -> datetime:
@@ -16,6 +16,6 @@ def utc_now() -> datetime:
     aware, UTC. Responses carry the zone ("...Z") for the same reason.
 
     Returns:
-        The current time with tzinfo set to timezone.utc.
+        The current time with tzinfo set to UTC (the 3.11+ alias of timezone.utc).
     """
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

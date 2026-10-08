@@ -38,6 +38,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
   `RequestBodyLimitMiddleware` answers 413 before any route runs (#13).
 
 ### Changed
+- `JWT_SECRET_KEY` minimum follows the algorithm: 32 bytes for HS256, 48 for
+  HS384, 64 for HS512 (RFC 7518 section 3.2), checked at startup by the tested
+  `config.minimum_secret_bytes()`; `decode_access_token` also passes PyJWT's
+  `enforce_minimum_key_length`, so the library's own check is an error, not a
+  warning (#14).
+- Domain exceptions are mapped to status codes once, by app-level exception
+  handlers, instead of a try/except in every route; same codes and bodies (#14).
+- `utc_now()` uses `datetime.UTC`; `UserResponseSchema` declares `created_at`
+  and `updated_at` as `AwareDatetime`, the contract SQLModel's `UTCDateTime`
+  fulfils (#14).
+- Python 3.14 features evaluated for this code base and left unused, so the
+  question need not be reopened: template strings (no templating), deferred
+  annotations (no forward references to simplify), multiple interpreters and
+  free-threading (nothing CPU-bound), `compression.zstd`, `functools.Placeholder`.
+  Adopted: `uuid.uuid7()` (#12), PEP 758 `except A, B:` via Black, the asyncio
+  introspection commands in the setup guide (#14).
 - Users are identified by UUIDv7 (`uuid.uuid7()`, new in Python 3.14) instead
   of an auto-increment integer: `id` in every response and the token subject is
   now a UUID string. Ids no longer reveal how many accounts exist, and uuid7 is
