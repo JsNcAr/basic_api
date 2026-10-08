@@ -43,6 +43,7 @@ from .config import (
 )
 from .database import engine, get_session, init_db, ping
 from .dependencies import get_current_user
+from .exceptions import IdentifierTakenError, PasswordVerificationError
 from .limiter import RATE_LIMIT_LOGIN, limiter, rate_limit_exceeded_handler
 from .routers import auth, users
 from .schemas.errors import error_responses
@@ -81,6 +82,22 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+
+def _domain_error(status_code: int):
+    """A handler that turns a domain exception into {"detail": str(exc)}."""
+
+    def handler(request: Request, exc: Exception) -> JSONResponse:
+        return JSONResponse(status_code=status_code, content={"detail": str(exc)})
+
+    return handler
+
+
+# Domain exceptions from the services are mapped to status codes here, once,
+# instead of in a try/except in every route. The services stay HTTP-free; a
+# route only catches what it has to log.
+app.add_exception_handler(IdentifierTakenError, _domain_error(409))
+app.add_exception_handler(PasswordVerificationError, _domain_error(400))
 
 # Middleware order: each add_middleware() wraps the ones before it, so the last
 # added runs first. The body limit goes in first so that CORS, added after it,

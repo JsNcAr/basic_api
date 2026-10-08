@@ -13,7 +13,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from ..database import get_session
 from ..dependencies import get_current_user
-from ..exceptions import IdentifierTakenError, PasswordVerificationError
+from ..exceptions import AppError
 from ..limiter import RATE_LIMIT_REGISTER, limiter
 from ..schemas import SuccessResponse
 from ..schemas.errors import error_responses
@@ -70,8 +70,8 @@ async def create_user(
     """
     try:
         db_user = await user_service.create_user(session, user_create)
-    except IdentifierTakenError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+    except AppError:
+        raise  # mapped to a status code by the handlers in main.py
     except Exception:
         await session.rollback()
         logger.exception("Failed to create user")
@@ -146,8 +146,8 @@ async def update_current_user(
     """
     try:
         db_user = await user_service.update_user(session, current_user, user_update)
-    except IdentifierTakenError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+    except AppError:
+        raise  # mapped to a status code by the handlers in main.py
     except Exception:
         await session.rollback()
         logger.exception("Failed to update user")
@@ -195,8 +195,8 @@ async def change_password(
     """
     try:
         await user_service.change_user_password(session, current_user, password_change)
-    except PasswordVerificationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except AppError:
+        raise  # mapped to a status code by the handlers in main.py
     except Exception:
         await session.rollback()
         logger.exception("Failed to change password")
@@ -245,8 +245,8 @@ async def delete_current_user(
     """
     try:
         await user_service.delete_user(session, current_user, body.password)
-    except PasswordVerificationError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except AppError:
+        raise  # mapped to a status code by the handlers in main.py
     except Exception:
         await session.rollback()
         logger.exception("Failed to delete user")

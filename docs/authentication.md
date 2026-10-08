@@ -64,7 +64,9 @@ stateless and live until `exp` (see [Known Issues](known_issues.md#tokens-cannot
 - **Constant-time login**: when the identifier matches no account, the password
   is verified against a sentinel hash anyway, so timing does not reveal which
   accounts exist, and both failures return the same body.
-- **Startup validation**: a `JWT_SECRET_KEY` under 32 bytes, an algorithm
+- **Startup validation**: a `JWT_SECRET_KEY` shorter than the algorithm's
+  minimum (32 bytes for HS256, 48 for HS384, 64 for HS512; RFC 7518 section
+  3.2, the same rule PyJWT enforces at decode), an algorithm
   outside `HS256`/`HS384`/`HS512`, or fewer than 12 bcrypt rounds refuse to
   start (`config.py`).
 - **Fixed error messages**: a failed token decode answers one message; the

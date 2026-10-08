@@ -212,9 +212,10 @@ live in every deployment of the starter.
 
 **Where:** `src/basic_api/config.py`, `src/basic_api/limiter.py`, `tests/`.
 
-The checks that refuse to start (required variables, secret length, algorithm
-allow-list, bcrypt minimum, rate-limit syntax) run at import, and no test
-exercises any of them. `RATE_LIMIT_LOGIN` is applied but only the registration
+The checks that refuse to start (required variables, algorithm allow-list,
+bcrypt minimum, rate-limit syntax) run at import, and no test exercises them.
+The one exception is the secret-length rule, which lives in the tested function
+`minimum_secret_bytes()`. `RATE_LIMIT_LOGIN` is applied but only the registration
 limit has a test.
 
 **Fix:** move the checks into a `load_settings()` function that the module

@@ -2,7 +2,14 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import EmailStr, HttpUrl, TypeAdapter, ValidationError, field_validator
+from pydantic import (
+    AwareDatetime,
+    EmailStr,
+    HttpUrl,
+    TypeAdapter,
+    ValidationError,
+    field_validator,
+)
 from sqlmodel import Field, SQLModel
 
 from ..utils import utc_now
@@ -134,5 +141,7 @@ class UserDeleteSchema(SQLModel):
 # 7. User as returned by the API: never the hash.
 class UserResponseSchema(UserBase):
     id: uuid.UUID
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+    # AwareDatetime states the contract SQLModel's UTCDateTime fulfils: the values
+    # carry a zone, and serialise with it.
+    created_at: AwareDatetime
+    updated_at: Optional[AwareDatetime] = None
