@@ -11,11 +11,13 @@ the two in step. The distribution name in _package_version() must match the
 `name` in pyproject.toml.
 """
 
+import logging
 import os
 import sys
 from importlib.metadata import PackageNotFoundError, version
 
 from dotenv import load_dotenv
+from pydantic import SecretStr
 
 load_dotenv()
 
@@ -71,10 +73,51 @@ def docs_enabled(environment: str, enable_docs: str | None) -> bool:
     return enable_docs.strip().lower() in ("1", "true", "yes", "on")
 
 
+_LOG_FORMATS = ("json", "text")
+
+
+def log_format(environment: str, raw: str | None) -> str:
+    """
+    The log line format: JSON lines in production, readable text elsewhere.
+
+    LOG_FORMAT overrides either way, so a production box can be read by eye
+    during an incident and a staging one can feed a collector.
+
+    Args:
+        environment: Value of ENVIRONMENT, already lower-cased.
+        raw: Raw value of LOG_FORMAT, or None when unset.
+
+    Returns:
+        "json" or "text".
+
+    Raises:
+        ValueError: LOG_FORMAT is set to something else.
+    """
+    if raw is None or raw.strip() == "":
+        return "json" if environment == "production" else "text"
+    value = raw.strip().lower()
+    if value not in _LOG_FORMATS:
+        raise ValueError(f"LOG_FORMAT={raw!r} is not one of " + ", ".join(_LOG_FORMATS))
+    return value
+
+
 # --- Application -------------------------------------------------------------
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
 ENABLE_DOCS = docs_enabled(ENVIRONMENT, os.getenv("ENABLE_DOCS"))
+
+# --- Logging -----------------------------------------------------------------
+# Applied by logging_config.py when the app starts; uvicorn's own loggers are
+# not affected.
+LOG_LEVEL = (os.getenv("LOG_LEVEL") or "INFO").strip().upper()
+if LOG_LEVEL not in logging.getLevelNamesMapping():
+    raise RuntimeError(
+        f"LOG_LEVEL={LOG_LEVEL!r} is not one of DEBUG, INFO, WARNING, ERROR, CRITICAL"
+    )
+try:
+    LOG_FORMAT = log_format(ENVIRONMENT, os.getenv("LOG_FORMAT"))
+except ValueError as e:
+    raise RuntimeError(str(e))
 
 
 def _package_version() -> str:
@@ -131,8 +174,11 @@ DATABASE_ECHO = _flag("DATABASE_ECHO", False)
 
 # --- Security ----------------------------------------------------------------
 
+# The two secrets are SecretStr: their repr is '**********', so a traceback, a
+# debugger dump or a log line that reaches a config value never shows them.
+# Use .get_secret_value() at the point of use.
 # The client API key (see security.py for what it is and is not).
-API_KEY: str = _required("API_KEY")
+API_KEY = SecretStr(_required("API_KEY"))
 
 # 32 bytes is the HMAC key size the HS256 family is specified for; a shorter
 # secret weakens every token at once.
@@ -171,9 +217,9 @@ if JWT_ALGORITHM not in _ALLOWED_ALGORITHMS:
         + ", ".join(_ALLOWED_ALGORITHMS)
     )
 
-JWT_SECRET_KEY: str = _required("JWT_SECRET_KEY")
+JWT_SECRET_KEY = SecretStr(_required("JWT_SECRET_KEY"))
 _minimum = minimum_secret_bytes(JWT_ALGORITHM)
-if len(JWT_SECRET_KEY.encode("utf-8")) < _minimum:
+if len(JWT_SECRET_KEY.get_secret_value().encode("utf-8")) < _minimum:
     raise RuntimeError(
         f"JWT_SECRET_KEY must be at least {_minimum} bytes for {JWT_ALGORITHM} "
         "(RFC 7518 section 3.2). Generate one with: python -c 'import secrets; "

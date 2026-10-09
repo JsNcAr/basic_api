@@ -26,3 +26,25 @@ async def test_registration_is_limited_per_client(client):
     assert statuses[10] == 429
     assert last.headers["Retry-After"] == "60"
     assert last.json()["detail"].startswith("Too many requests")
+
+
+async def test_limited_responses_report_the_remaining_budget(client):
+    """slowapi's headers: the limit, what is left of it, and when it resets."""
+    limiter.enabled = True
+    limiter.reset()
+    try:
+        remaining = []
+        for i in range(2):
+            response = await client.post(
+                "/api/users/",
+                json={"username": f"budget{i}", "password": "strongPassword123!"},
+            )
+            assert response.status_code == 201
+            assert response.headers["X-RateLimit-Limit"] == "10"
+            assert float(response.headers["X-RateLimit-Reset"]) > 0  # Unix time
+            remaining.append(int(response.headers["X-RateLimit-Remaining"]))
+    finally:
+        limiter.enabled = False
+        limiter.reset()
+
+    assert remaining == [9, 8]

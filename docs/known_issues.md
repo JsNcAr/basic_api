@@ -155,19 +155,19 @@ or every client shares one bucket.
 **Fix:** shared storage for the counts (slowapi supports Redis) when running
 more than one worker.
 
-### No logging configuration or observability
+### No metrics, tracing or error tracking
 
 **Where:** application-wide.
 
-Modules call `logging.getLogger(__name__)` but nothing configures logging;
-output and level are whatever uvicorn sets. No request ids, no structured logs,
-no metrics, no error tracking.
+Logging is configured (`logging_config.py`: levels, JSON or text lines, a
+request id on every line and response), but there are no metrics, no traces
+and no error tracker: a 500 is a log line, not an alert.
 
-**Fix:** configure logging at startup (JSON in production), a request-id
-middleware, and an error tracker.
-For tracing and metrics, FastAPI 0.142's native OpenTelemetry (`FastAPI(telemetry={...})`,
-with `auto_configure` reading the standard `OTEL_*` variables) is the path; it
-needs `opentelemetry-sdk` and an OTLP exporter installed to emit anything.
+**Fix:** for tracing and metrics, FastAPI 0.142's native OpenTelemetry
+(`FastAPI(telemetry={...})`, with `auto_configure` reading the standard `OTEL_*`
+variables) is the path; it needs `opentelemetry-sdk` and an OTLP exporter
+installed to emit anything. An error tracker (Sentry or similar) hooks in as a
+logging handler or ASGI middleware.
 
 ### CI has no coverage or secret scan
 

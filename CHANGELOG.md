@@ -11,6 +11,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
   configuration for weekly, grouped dependency and GitHub Actions updates (#9).
 
 ### Security
+- `API_KEY` and `JWT_SECRET_KEY` are pydantic `SecretStr` values in
+  `config.py`: their repr is `**********`, so a traceback or a log line that
+  reaches a config value never shows them (#16).
 - JWTs are signed and verified with PyJWT 2.15 instead of python-jose 3.5.
   `pip-audit` reported python-jose with an unfixed algorithm-confusion
   advisory (CVE-2026-85394; this API already restricted algorithms and was not
@@ -29,6 +32,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
 - `cryptography` 46.0.3 to 50.0.2, closing seven published advisories (#7).
 
 ### Added
+- Logging configuration (`logging_config.py`): `LOG_LEVEL`, `LOG_FORMAT`
+  (`json` lines in production by default, `text` elsewhere), and a
+  QueueHandler/QueueListener pipeline from the standard library so that
+  writing a line never blocks the event loop; the listener runs as a context
+  manager (Python 3.14) for the app's lifetime. `X-Request-ID` on every
+  response (`request_id.py`; a supplied id is kept when it is safe, otherwise
+  a UUIDv7 is generated) and on every log line of that request (#16).
+- `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` on the
+  responses of the two rate-limited routes (slowapi `headers_enabled`), so a
+  client can pace itself before the `429` (#16).
 - Response models for `/`, `/health`, `/token` and `/protected-example`, so the
   OpenAPI document has a schema for every response (the token response had
   none) and FastAPI 0.130+ serialises them with pydantic-core; every status a

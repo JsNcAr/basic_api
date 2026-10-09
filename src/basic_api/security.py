@@ -45,7 +45,9 @@ async def verify_api_key(
         async def list_things(): ...
     """
     # compare_digest: equal time whatever the first differing byte is.
-    if not x_api_key or not secrets.compare_digest(x_api_key, API_KEY):
+    if not x_api_key or not secrets.compare_digest(
+        x_api_key, API_KEY.get_secret_value()
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or missing API key",
