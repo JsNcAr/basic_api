@@ -56,4 +56,4 @@ async def test_a_limited_route_reports_its_budget_in_headers():
     assert first.headers["X-RateLimit-Limit"] == "3"
     assert first.headers["X-RateLimit-Remaining"] == "2"
     assert second.headers["X-RateLimit-Remaining"] == "1"
-    assert int(first.headers["X-RateLimit-Reset"]) > 0
+    assert float(first.headers["X-RateLimit-Reset"]) > 0  # Unix time

@@ -41,7 +41,7 @@ async def test_limited_responses_report_the_remaining_budget(client):
             )
             assert response.status_code == 201
             assert response.headers["X-RateLimit-Limit"] == "10"
-            assert int(response.headers["X-RateLimit-Reset"]) > 0
+            assert float(response.headers["X-RateLimit-Reset"]) > 0  # Unix time
             remaining.append(int(response.headers["X-RateLimit-Remaining"]))
     finally:
         limiter.enabled = False
