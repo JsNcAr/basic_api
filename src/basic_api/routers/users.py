@@ -7,7 +7,7 @@ at /users/me, and nothing here exposes other accounts.
 
 import logging
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 
 from ..dependencies import CurrentUserDep, SessionDep
 from ..exceptions import AppError
@@ -37,6 +37,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @limiter.limit(RATE_LIMIT_REGISTER)
 async def create_user(
     request: Request,
+    response: Response,  # slowapi writes the X-RateLimit headers onto it
     user_create: UserCreateSchema,
     session: SessionDep,
 ):
@@ -45,6 +46,7 @@ async def create_user(
 
     Args:
         request: Needed by the rate limiter (injected).
+        response: Receives the X-RateLimit headers from the limiter (injected).
         user_create: Registration payload; `username` and `password` required.
         session: Database session.
 

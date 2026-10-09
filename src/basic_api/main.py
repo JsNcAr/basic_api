@@ -24,7 +24,7 @@ from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Query, Request
+from fastapi import Depends, FastAPI, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
@@ -182,6 +182,7 @@ async def health_check():
 @limiter.limit(RATE_LIMIT_LOGIN)
 async def login(
     request: Request,
+    response: Response,  # slowapi writes the X-RateLimit headers onto it
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: SessionDep,
     expires_delta: Annotated[
@@ -203,6 +204,7 @@ async def login(
 
     Args:
         request: Needed by the rate limiter (injected).
+        response: Receives the X-RateLimit headers from the limiter (injected).
         form_data: OAuth2 password form with `username` and `password` fields.
         expires_delta: Requested token lifetime (query parameter); the server
             caps it, see access_token_lifetime.

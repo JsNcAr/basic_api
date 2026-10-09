@@ -7,6 +7,11 @@ router importing it from main.py would be a circular import.
 Limits are per client IP, as uvicorn sees it (behind a reverse proxy, make sure
 uvicorn trusts the proxy's forwarded headers), and per process: with several
 workers each keeps its own count, so the effective limit is multiplied.
+
+A limited route answers with X-RateLimit-Limit, X-RateLimit-Remaining and
+X-RateLimit-Reset (Unix time), so a client can pace itself before a 429. slowapi
+writes them onto the route's `response: Response` parameter, which is why the
+limited routes declare one they never touch.
 """
 
 from fastapi import Request
@@ -28,7 +33,7 @@ for _name, _value in (
     except ValueError as e:
         raise RuntimeError(f"{_name}={_value!r} is not a valid rate limit: {e}")
 
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, headers_enabled=True)
 
 
 def rate_limit_exceeded_handler(request: Request, exc: Exception) -> JSONResponse:

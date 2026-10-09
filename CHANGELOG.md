@@ -36,6 +36,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
   manager (Python 3.14) for the app's lifetime. `X-Request-ID` on every
   response (`request_id.py`; a supplied id is kept when it is safe, otherwise
   a UUIDv7 is generated) and on every log line of that request (#16).
+- `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` on the
+  responses of the two rate-limited routes (slowapi `headers_enabled`), so a
+  client can pace itself before the `429` (#16).
 - Response models for `/`, `/health`, `/token` and `/protected-example`, so the
   OpenAPI document has a schema for every response (the token response had
   none) and FastAPI 0.130+ serialises them with pydantic-core; every status a
