@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from pydantic import (
     AwareDatetime,
@@ -25,7 +24,7 @@ URL_MAX_LENGTH = 2083
 _HTTP_URL = TypeAdapter(HttpUrl)
 
 
-def validate_http_url(value: Optional[str]) -> Optional[str]:
+def validate_http_url(value: str | None) -> str | None:
     """
     An http(s) URL as a string, or null.
 
@@ -59,21 +58,21 @@ class UserBase(SQLModel):
         max_length=USERNAME_MAX_LENGTH,
         description="Unique username",
     )
-    email: Optional[EmailStr] = Field(
+    email: EmailStr | None = Field(
         default=None,
         index=True,
         unique=True,
         max_length=EMAIL_MAX_LENGTH,
         description="Email address; also accepted as the login identifier",
     )
-    phone_number: Optional[str] = Field(
+    phone_number: str | None = Field(
         default=None,
         index=True,
         unique=True,
         max_length=PHONE_NUMBER_MAX_LENGTH,
         description="Phone number; also accepted as the login identifier",
     )
-    profile_picture_url: Optional[str] = Field(
+    profile_picture_url: str | None = Field(
         default=None,
         max_length=URL_MAX_LENGTH,
         description="http(s) URL of the profile picture",
@@ -95,7 +94,7 @@ class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid7, primary_key=True)
     hashed_password: str = Field(description="bcrypt hash of the SHA-256 pre-hash")
     created_at: datetime = Field(default_factory=utc_now)
-    updated_at: Optional[datetime] = Field(
+    updated_at: datetime | None = Field(
         default=None, sa_column_kwargs={"onupdate": utc_now}
     )
 
@@ -114,13 +113,13 @@ class UserCreateSchema(UserBase):
 #    not be able to flip (a self-disabled account could never re-enable itself),
 #    and the password has its own route with its own confirmation.
 class UserUpdateSchema(SQLModel):
-    email: Optional[EmailStr] = Field(
+    email: EmailStr | None = Field(
         default=None, max_length=EMAIL_MAX_LENGTH, description="Email address"
     )
-    phone_number: Optional[str] = Field(
+    phone_number: str | None = Field(
         default=None, max_length=PHONE_NUMBER_MAX_LENGTH, description="Phone number"
     )
-    profile_picture_url: Optional[HttpUrl] = Field(
+    profile_picture_url: HttpUrl | None = Field(
         default=None, description="http(s) URL of the profile picture"
     )
 
@@ -144,4 +143,4 @@ class UserResponseSchema(UserBase):
     # AwareDatetime states the contract SQLModel's UTCDateTime fulfils: the values
     # carry a zone, and serialise with it.
     created_at: AwareDatetime
-    updated_at: Optional[AwareDatetime] = None
+    updated_at: AwareDatetime | None = None

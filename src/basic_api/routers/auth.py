@@ -4,14 +4,11 @@ Authentication wrapper endpoints.
 Thin /auth/* routes around the OAuth2 + JWT flow for frontend convenience.
 """
 
-from typing import Annotated
+from fastapi import APIRouter
 
-from fastapi import APIRouter, Depends
-
-from ..dependencies import get_current_user
+from ..dependencies import CurrentUserDep
 from ..schemas import SuccessResponse, UserResponseSchema
 from ..schemas.errors import error_responses
-from ..schemas.user import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -21,9 +18,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     response_model=SuccessResponse[UserResponseSchema],
     responses=error_responses(403),
 )
-async def get_current_user_info(
-    current_user: Annotated[User, Depends(get_current_user)],
-):
+async def get_current_user_info(current_user: CurrentUserDep):
     """
     The authenticated user, as stored.
 
@@ -54,7 +49,7 @@ async def get_current_user_info(
     response_model=SuccessResponse[None],
     responses=error_responses(403),
 )
-async def logout(current_user: Annotated[User, Depends(get_current_user)]):
+async def logout(current_user: CurrentUserDep):
     """
     Confirm a logout. Tokens are stateless, so the client deletes its copy;
     nothing is invalidated server-side (see docs/known_issues.md).

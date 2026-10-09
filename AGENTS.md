@@ -19,6 +19,9 @@ Poetry-managed.
   in the change that fixes it.
 * **Style**: no emojis or em-dashes in code or docs; do not guess APIs,
   versions, flags or package names, verify in code or docs.
+* **Typing**: `X | None`, never `Optional[X]`; generic classes use PEP 695
+  (`class Envelope[T](BaseModel)`); route dependencies are `Annotated`, via
+  the `SessionDep` and `CurrentUserDep` aliases in `dependencies.py`.
 
 ## Project Structure
 ```

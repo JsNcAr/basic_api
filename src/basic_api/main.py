@@ -21,7 +21,7 @@ Usage:
 
 from contextlib import asynccontextmanager
 from datetime import timedelta
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,7 +29,6 @@ from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from slowapi.errors import RateLimitExceeded
 from starlette.middleware.body_limit import RequestBodyLimitMiddleware
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from .auth import access_token_lifetime, authenticate_user, create_access_token
 from .config import (
@@ -41,8 +40,8 @@ from .config import (
     MAX_REQUEST_BODY_BYTES,
     ROOT_PATH,
 )
-from .database import engine, get_session, init_db, ping
-from .dependencies import get_current_user
+from .database import engine, init_db, ping
+from .dependencies import CurrentUserDep, SessionDep
 from .exceptions import IdentifierTakenError, PasswordVerificationError
 from .limiter import RATE_LIMIT_LOGIN, limiter, rate_limit_exceeded_handler
 from .routers import auth, users
@@ -53,7 +52,6 @@ from .schemas.system import (
     HealthResponse,
     TokenResponse,
 )
-from .schemas.user import User
 from .security import verify_api_key
 
 SERVICE_NAME = "basic-api"
@@ -167,15 +165,17 @@ async def health_check():
 async def login(
     request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    expires_delta: Optional[timedelta] = Query(
-        default=None,
-        description=(
-            "Requested token lifetime, in seconds or as an ISO 8601 duration "
-            "(e.g. P1D). Capped at JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES; omitted, "
-            "zero or negative gets JWT_ACCESS_TOKEN_EXPIRE_MINUTES."
+    session: SessionDep,
+    expires_delta: Annotated[
+        timedelta | None,
+        Query(
+            description=(
+                "Requested token lifetime, in seconds or as an ISO 8601 duration "
+                "(e.g. P1D). Capped at JWT_MAX_ACCESS_TOKEN_EXPIRE_MINUTES; "
+                "omitted, zero or negative gets JWT_ACCESS_TOKEN_EXPIRE_MINUTES."
+            ),
         ),
-    ),
-    session: AsyncSession = Depends(get_session),
+    ] = None,
 ):
     """
     OAuth2 password flow. Public: no API key needed, which also lets Swagger's
@@ -224,7 +224,7 @@ async def login(
     responses=error_responses(401, 403),
 )
 async def protected_example(
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: CurrentUserDep,
     api_key: Annotated[str, Depends(verify_api_key)],
 ):
     """

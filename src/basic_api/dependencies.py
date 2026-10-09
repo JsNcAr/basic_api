@@ -16,10 +16,15 @@ from .schemas.user import User
 # tokenUrl is where clients obtain tokens; Swagger's Authorize dialog uses it.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+# Dependency aliases: one token per dependency in a route signature, the style
+# FastAPI's documentation recommends. CurrentUserDep is defined below
+# get_current_user.
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
 
 async def get_current_user(
     token: Annotated[str, Depends(oauth2_scheme)],
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
 ) -> User:
     """
     The user the bearer token belongs to, loaded from the database.
@@ -42,7 +47,7 @@ async def get_current_user(
 
     Example:
         @router.get("/mine")
-        async def mine(current_user: Annotated[User, Depends(get_current_user)]):
+        async def mine(current_user: CurrentUserDep):
             return {"username": current_user.username}
     """
     payload = decode_access_token(token)
@@ -71,3 +76,6 @@ async def get_current_user(
             detail="This account is currently disabled",
         )
     return user
+
+
+CurrentUserDep = Annotated[User, Depends(get_current_user)]

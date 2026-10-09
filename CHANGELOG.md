@@ -38,6 +38,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
   `RequestBodyLimitMiddleware` answers 413 before any route runs (#13).
 
 ### Changed
+- Annotations use the current syntax: `X | None` instead of `Optional[X]`,
+  `SuccessResponse` is a PEP 695 generic (`class SuccessResponse[T]`), and
+  every route dependency is `Annotated`, through the `SessionDep` and
+  `CurrentUserDep` aliases in `dependencies.py`. No behaviour change; the
+  OpenAPI document differs only in the envelope example's id, now a UUID (#15).
 - `JWT_SECRET_KEY` minimum follows the algorithm: 32 bytes for HS256, 48 for
   HS384, 64 for HS512 (RFC 7518 section 3.2), checked at startup by the tested
   `config.minimum_secret_bytes()`; `decode_access_token` also passes PyJWT's

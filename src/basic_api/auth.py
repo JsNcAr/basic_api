@@ -15,7 +15,6 @@ import hashlib
 import logging
 import uuid
 from datetime import timedelta
-from typing import Optional
 
 import bcrypt
 from fastapi import HTTPException, status
@@ -136,7 +135,7 @@ async def get_password_hash_async(password: str) -> str:
 _DUMMY_PASSWORD_HASH: str = get_password_hash("_constant_time_sentinel_")
 
 
-def access_token_lifetime(requested: Optional[timedelta] = None) -> timedelta:
+def access_token_lifetime(requested: timedelta | None = None) -> timedelta:
     """
     The lifetime a login token actually gets.
 
@@ -160,7 +159,7 @@ def access_token_lifetime(requested: Optional[timedelta] = None) -> timedelta:
     return min(requested, maximum)
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """
     Create a signed JWT with the given claims plus `iat` and `exp`.
 
@@ -265,7 +264,7 @@ async def authenticate_user(
     return user
 
 
-async def get_user_by_id(session: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
+async def get_user_by_id(session: AsyncSession, user_id: uuid.UUID) -> User | None:
     """
     Load a user by primary key.
 
