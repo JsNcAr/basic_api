@@ -181,7 +181,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     now = utc_now()
     lifetime = expires_delta or timedelta(minutes=JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {**data, "iat": now, "exp": now + lifetime}
-    return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return jwt.encode(
+        to_encode, JWT_SECRET_KEY.get_secret_value(), algorithm=JWT_ALGORITHM
+    )
 
 
 def decode_access_token(token: str) -> dict:
@@ -202,7 +204,7 @@ def decode_access_token(token: str) -> dict:
     try:
         return jwt.decode(
             token,
-            JWT_SECRET_KEY,
+            JWT_SECRET_KEY.get_secret_value(),
             algorithms=[JWT_ALGORITHM],
             # PyJWT's own key-length rule as an error, not a warning: a second
             # line behind the startup check in config.py, in case a key ever

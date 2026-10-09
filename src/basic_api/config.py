@@ -17,6 +17,7 @@ import sys
 from importlib.metadata import PackageNotFoundError, version
 
 from dotenv import load_dotenv
+from pydantic import SecretStr
 
 load_dotenv()
 
@@ -173,8 +174,11 @@ DATABASE_ECHO = _flag("DATABASE_ECHO", False)
 
 # --- Security ----------------------------------------------------------------
 
+# The two secrets are SecretStr: their repr is '**********', so a traceback, a
+# debugger dump or a log line that reaches a config value never shows them.
+# Use .get_secret_value() at the point of use.
 # The client API key (see security.py for what it is and is not).
-API_KEY: str = _required("API_KEY")
+API_KEY = SecretStr(_required("API_KEY"))
 
 # 32 bytes is the HMAC key size the HS256 family is specified for; a shorter
 # secret weakens every token at once.
@@ -213,9 +217,9 @@ if JWT_ALGORITHM not in _ALLOWED_ALGORITHMS:
         + ", ".join(_ALLOWED_ALGORITHMS)
     )
 
-JWT_SECRET_KEY: str = _required("JWT_SECRET_KEY")
+JWT_SECRET_KEY = SecretStr(_required("JWT_SECRET_KEY"))
 _minimum = minimum_secret_bytes(JWT_ALGORITHM)
-if len(JWT_SECRET_KEY.encode("utf-8")) < _minimum:
+if len(JWT_SECRET_KEY.get_secret_value().encode("utf-8")) < _minimum:
     raise RuntimeError(
         f"JWT_SECRET_KEY must be at least {_minimum} bytes for {JWT_ALGORITHM} "
         "(RFC 7518 section 3.2). Generate one with: python -c 'import secrets; "

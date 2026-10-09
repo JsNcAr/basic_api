@@ -73,3 +73,9 @@ def test_log_format_is_json_in_production_unless_overridden(environment, raw, ex
 def test_log_format_rejects_unknown_values():
     with pytest.raises(ValueError):
         log_format("development", "xml")
+
+
+def test_secrets_do_not_show_in_their_repr():
+    assert "*" in repr(config.API_KEY) and "test" not in repr(config.API_KEY)
+    assert config.JWT_SECRET_KEY.get_secret_value() not in repr(config.JWT_SECRET_KEY)
+    assert str(config.JWT_SECRET_KEY) == "**********"

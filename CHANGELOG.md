@@ -11,6 +11,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
   configuration for weekly, grouped dependency and GitHub Actions updates (#9).
 
 ### Security
+- `API_KEY` and `JWT_SECRET_KEY` are pydantic `SecretStr` values in
+  `config.py`: their repr is `**********`, so a traceback or a log line that
+  reaches a config value never shows them (#16).
 - JWTs are signed and verified with PyJWT 2.15 instead of python-jose 3.5.
   `pip-audit` reported python-jose with an unfixed algorithm-confusion
   advisory (CVE-2026-85394; this API already restricted algorithms and was not
