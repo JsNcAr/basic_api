@@ -11,6 +11,7 @@ the two in step. The distribution name in _package_version() must match the
 `name` in pyproject.toml.
 """
 
+import logging
 import os
 import sys
 from importlib.metadata import PackageNotFoundError, version
@@ -71,10 +72,51 @@ def docs_enabled(environment: str, enable_docs: str | None) -> bool:
     return enable_docs.strip().lower() in ("1", "true", "yes", "on")
 
 
+_LOG_FORMATS = ("json", "text")
+
+
+def log_format(environment: str, raw: str | None) -> str:
+    """
+    The log line format: JSON lines in production, readable text elsewhere.
+
+    LOG_FORMAT overrides either way, so a production box can be read by eye
+    during an incident and a staging one can feed a collector.
+
+    Args:
+        environment: Value of ENVIRONMENT, already lower-cased.
+        raw: Raw value of LOG_FORMAT, or None when unset.
+
+    Returns:
+        "json" or "text".
+
+    Raises:
+        ValueError: LOG_FORMAT is set to something else.
+    """
+    if raw is None or raw.strip() == "":
+        return "json" if environment == "production" else "text"
+    value = raw.strip().lower()
+    if value not in _LOG_FORMATS:
+        raise ValueError(f"LOG_FORMAT={raw!r} is not one of " + ", ".join(_LOG_FORMATS))
+    return value
+
+
 # --- Application -------------------------------------------------------------
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development").strip().lower()
 ENABLE_DOCS = docs_enabled(ENVIRONMENT, os.getenv("ENABLE_DOCS"))
+
+# --- Logging -----------------------------------------------------------------
+# Applied by logging_config.py when the app starts; uvicorn's own loggers are
+# not affected.
+LOG_LEVEL = (os.getenv("LOG_LEVEL") or "INFO").strip().upper()
+if LOG_LEVEL not in logging.getLevelNamesMapping():
+    raise RuntimeError(
+        f"LOG_LEVEL={LOG_LEVEL!r} is not one of DEBUG, INFO, WARNING, ERROR, CRITICAL"
+    )
+try:
+    LOG_FORMAT = log_format(ENVIRONMENT, os.getenv("LOG_FORMAT"))
+except ValueError as e:
+    raise RuntimeError(str(e))
 
 
 def _package_version() -> str:

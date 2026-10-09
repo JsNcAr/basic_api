@@ -42,6 +42,8 @@ with a comment; the table below is the summary.
 | `APP_VERSION` | | the installed package version | Reported by `GET /` and the OpenAPI document |
 | `ROOT_PATH` | | empty | Path prefix when served behind a reverse proxy |
 | `CORS_ORIGINS`, `CORS_METHODS`, `CORS_HEADERS` | | `*` | Comma-separated; a browser frontend should list its origins |
+| `LOG_LEVEL` | | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` or `CRITICAL` |
+| `LOG_FORMAT` | | by `ENVIRONMENT` | `json` (one object per line) or `text`; `json` in production by default |
 | `DATABASE_ECHO` | | `false` | Log every SQL statement (development only) |
 | `RATE_LIMIT_LOGIN` | | `60/minute` | Per client IP on `POST /token` |
 | `RATE_LIMIT_REGISTER` | | `10/minute` | Per client IP on `POST /api/users/` |
@@ -66,6 +68,23 @@ deploy step (see [Known Issues](known_issues.md#schema-is-created-at-startup-not
 Behind a reverse proxy under a path prefix, set `ROOT_PATH`. uvicorn trusts
 `X-Forwarded-For` from `127.0.0.1` by default; if the proxy runs elsewhere, add
 `--forwarded-allow-ips <proxy-ip>`, or every client shares one rate-limit bucket.
+
+## Logging
+
+Every log line from the application goes through one pipeline, configured in
+`src/basic_api/logging_config.py` when the app starts: a queue on the root
+logger, and a thread that writes to stderr, so a slow destination never stalls
+a request. `LOG_LEVEL` sets the threshold; `LOG_FORMAT` picks the line format,
+`text` for a terminal and `json` (one object per line, with `timestamp`,
+`level`, `logger`, `message`, `request_id` and `exception` when there is one)
+for a log collector. Production defaults to `json`. uvicorn's own startup and
+access lines are not affected; configure those with uvicorn's `--log-config`
+if needed.
+
+Every response carries an `X-Request-ID` header and the log lines written while
+handling that request carry the same id. A gateway or client can send its own
+(1 to 128 characters of letters, digits, `.`, `_` or `-`); anything else is
+replaced by a generated UUIDv7, so the id is safe to put in a log.
 
 ## Testing
 

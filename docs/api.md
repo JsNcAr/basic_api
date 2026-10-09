@@ -23,6 +23,11 @@ exception is `413`, which Starlette answers as plain text before the app runs.
 {"detail": "Not a valid request"}
 ```
 
+**Request id**: every response carries `X-Request-ID`, generated (a UUIDv7)
+unless the request supplied an acceptable one (1 to 128 characters of letters,
+digits, `.`, `_` or `-`). The server's log lines for that request carry the
+same id; quote it when reporting a problem.
+
 **Auth** column: `key` is the `X-API-Key` header, `token` is
 `Authorization: Bearer <jwt>`. See [Authentication](authentication.md) for the
 error tables common to all protected routes.

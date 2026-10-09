@@ -15,6 +15,9 @@ Poetry-managed.
   response; log it with `logger.exception` and answer a generic message.
 * **Docstrings**: Google style (`Args`, `Returns`, `Raises`, `Example`); route
   docstrings render in Swagger, keep the curl examples current.
+* **Logging**: `logging.getLogger(__name__)` in a module; only
+  `logging_config.py` configures logging, from the lifespan in `main.py`.
+  Never log a secret, a password or a token; the request id is added for you.
 * **Known issues**: `docs/known_issues.md` is the single list; remove an entry
   in the change that fixes it.
 * **Style**: no emojis or em-dashes in code or docs; do not guess APIs,
@@ -33,6 +36,8 @@ src/basic_api/
   dependencies.py  # get_current_user (token -> User from the database)
   database.py      # engine, session factory, create_all, ping
   limiter.py       # shared rate limiter and 429 response
+  logging_config.py # level, JSON/text lines, queue listener, request id on lines
+  request_id.py    # X-Request-ID middleware (contextvar for the log lines)
   exceptions.py    # domain exceptions
   utils.py         # utc_now
   routers/         # auth (/api/auth), users (/api/users)

@@ -19,6 +19,7 @@ Usage:
         uvicorn basic_api.main:app --host 0.0.0.0 --port 8000 --app-dir src
 """
 
+import logging
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Annotated
@@ -37,6 +38,7 @@ from .config import (
     CORS_METHODS,
     CORS_ORIGINS,
     ENABLE_DOCS,
+    ENVIRONMENT,
     MAX_REQUEST_BODY_BYTES,
     ROOT_PATH,
 )
@@ -44,6 +46,8 @@ from .database import engine, init_db, ping
 from .dependencies import CurrentUserDep, SessionDep
 from .exceptions import IdentifierTakenError, PasswordVerificationError
 from .limiter import RATE_LIMIT_LOGIN, limiter, rate_limit_exceeded_handler
+from .logging_config import configure_logging
+from .request_id import REQUEST_ID_HEADER, RequestIdMiddleware
 from .routers import auth, users
 from .schemas.errors import error_responses
 from .schemas.system import (
@@ -56,14 +60,22 @@ from .security import verify_api_key
 
 SERVICE_NAME = "basic-api"
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
-    yield
-    # Close pooled connections on the way out instead of letting the process
-    # drop them, which PostgreSQL logs as aborted connections.
-    await engine.dispose()
+    # The listener thread that writes log lines runs for exactly as long as the
+    # app does; leaving the block drains the queue, so the last lines are not
+    # lost on shutdown.
+    with configure_logging():
+        logger.info("Starting %s %s (%s)", SERVICE_NAME, APP_VERSION, ENVIRONMENT)
+        await init_db()
+        yield
+        # Close pooled connections on the way out instead of letting the process
+        # drop them, which PostgreSQL logs as aborted connections.
+        await engine.dispose()
+        logger.info("Stopped %s", SERVICE_NAME)
 
 
 app = FastAPI(
@@ -99,7 +111,9 @@ app.add_exception_handler(PasswordVerificationError, _domain_error(400))
 
 # Middleware order: each add_middleware() wraps the ones before it, so the last
 # added runs first. The body limit goes in first so that CORS, added after it,
-# is outermost and a 413 still carries CORS headers for a browser client.
+# wraps it and a 413 still carries CORS headers for a browser client; the
+# request id goes in last, outermost, so that every response has one, 413s and
+# CORS preflights included.
 # Starlette's own `max_body_size` parameter is not forwarded by FastAPI(), hence
 # the middleware directly.
 app.add_middleware(RequestBodyLimitMiddleware, max_body_size=MAX_REQUEST_BODY_BYTES)
@@ -109,7 +123,11 @@ app.add_middleware(
     allow_origins=CORS_ORIGINS,
     allow_methods=CORS_METHODS,
     allow_headers=CORS_HEADERS,
+    # Let a browser client read the id off the response.
+    expose_headers=[REQUEST_ID_HEADER],
 )
+
+app.add_middleware(RequestIdMiddleware)
 
 
 @app.get("/", response_model=BannerResponse)

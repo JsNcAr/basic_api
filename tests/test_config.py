@@ -5,7 +5,7 @@ Configuration rules that need no database.
 import pytest
 
 from basic_api import config
-from basic_api.config import csv_list, docs_enabled
+from basic_api.config import csv_list, docs_enabled, log_format
 
 
 @pytest.mark.parametrize(
@@ -54,3 +54,22 @@ def test_secret_minimum_is_the_hash_output_size(algorithm, minimum):
 def test_secret_minimum_rejects_algorithms_this_api_does_not_allow():
     with pytest.raises(ValueError):
         config.minimum_secret_bytes("RS256")
+
+
+@pytest.mark.parametrize(
+    "environment, raw, expected",
+    [
+        ("development", None, "text"),
+        ("staging", "", "text"),
+        ("production", None, "json"),
+        ("production", "text", "text"),
+        ("development", " JSON ", "json"),
+    ],
+)
+def test_log_format_is_json_in_production_unless_overridden(environment, raw, expected):
+    assert log_format(environment, raw) == expected
+
+
+def test_log_format_rejects_unknown_values():
+    with pytest.raises(ValueError):
+        log_format("development", "xml")
