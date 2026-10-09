@@ -8,6 +8,7 @@ limits for protection.
 """
 
 import secrets
+from typing import Annotated
 
 from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
@@ -22,7 +23,9 @@ api_key_header = APIKeyHeader(
 )
 
 
-async def verify_api_key(x_api_key: str | None = Security(api_key_header)) -> str:
+async def verify_api_key(
+    x_api_key: Annotated[str | None, Security(api_key_header)],
+) -> str:
     """
     Dependency for routes that require the client API key.
 

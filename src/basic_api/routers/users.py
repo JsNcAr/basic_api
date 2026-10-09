@@ -6,20 +6,16 @@ at /users/me, and nothing here exposes other accounts.
 """
 
 import logging
-from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
-from sqlmodel.ext.asyncio.session import AsyncSession
+from fastapi import APIRouter, HTTPException, Request
 
-from ..database import get_session
-from ..dependencies import get_current_user
+from ..dependencies import CurrentUserDep, SessionDep
 from ..exceptions import AppError
 from ..limiter import RATE_LIMIT_REGISTER, limiter
 from ..schemas import SuccessResponse
 from ..schemas.errors import error_responses
 from ..schemas.user import (
     PasswordChangeSchema,
-    User,
     UserCreateSchema,
     UserDeleteSchema,
     UserResponseSchema,
@@ -41,8 +37,8 @@ router = APIRouter(prefix="/users", tags=["Users"])
 @limiter.limit(RATE_LIMIT_REGISTER)
 async def create_user(
     request: Request,
-    user_create: UserCreateSchema = Body(...),
-    session: AsyncSession = Depends(get_session),
+    user_create: UserCreateSchema,
+    session: SessionDep,
 ):
     """
     Register a user. Rate-limited per client IP (RATE_LIMIT_REGISTER).
@@ -86,9 +82,7 @@ async def create_user(
     response_model=SuccessResponse[UserResponseSchema],
     responses=error_responses(403),
 )
-async def read_current_user(
-    current_user: Annotated[User, Depends(get_current_user)],
-):
+async def read_current_user(current_user: CurrentUserDep):
     """
     The authenticated user's profile.
 
@@ -115,8 +109,8 @@ async def read_current_user(
 )
 async def update_current_user(
     user_update: UserUpdateSchema,
-    current_user: Annotated[User, Depends(get_current_user)],
-    session: AsyncSession = Depends(get_session),
+    current_user: CurrentUserDep,
+    session: SessionDep,
 ):
     """
     Update the authenticated user's profile.
@@ -164,8 +158,8 @@ async def update_current_user(
 )
 async def change_password(
     password_change: PasswordChangeSchema,
-    current_user: Annotated[User, Depends(get_current_user)],
-    session: AsyncSession = Depends(get_session),
+    current_user: CurrentUserDep,
+    session: SessionDep,
 ):
     """
     Change the authenticated user's password.
@@ -213,8 +207,8 @@ async def change_password(
 )
 async def delete_current_user(
     body: UserDeleteSchema,
-    current_user: Annotated[User, Depends(get_current_user)],
-    session: AsyncSession = Depends(get_session),
+    current_user: CurrentUserDep,
+    session: SessionDep,
 ):
     """
     Permanently delete the authenticated user's account.
