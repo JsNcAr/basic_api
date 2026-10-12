@@ -53,7 +53,7 @@ target-version = ["py314"]
 [tool.mypy]
 # Keep python_version in step with requires-python; files follows the src/ layout.
 python_version = "3.14"
-files = ["src"]
+files = ["src", "scripts"]
 plugins = ["pydantic.mypy"]
 check_untyped_defs = true
 warn_unused_ignores = true
