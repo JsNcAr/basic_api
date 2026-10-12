@@ -128,12 +128,22 @@ poetry run mypy                      # types, [tool.mypy] in pyproject.toml
 poetry run pip-audit                 # known vulnerabilities in the installed dependencies
 ```
 
-CI (`.github/workflows/ci.yml`) runs all four in `lint` and the suite in `test`
-against a `postgres:17` service, on every push to `main` and every pull
-request. Dependabot (`.github/dependabot.yml`) opens weekly pull requests for
-dependency and action updates, grouped by minor and patch; the same CI checks
-them. It installs the Poetry version named in `poetry.lock`'s header and the
-Python version in `.python-version`, so neither is pinned twice.
+CI runs all four in `lint` and the suite in `test` against a `postgres:17`
+service, on every push to `main` and every pull or merge request. Two
+pipeline files cover the two hosts this starter is used on, and a repository
+may carry both; each host ignores the other's file:
+
+- `.github/workflows/ci.yml` (GitHub Actions). Dependabot
+  (`.github/dependabot.yml`) opens weekly pull requests for dependency and
+  action updates, grouped by minor and patch; the same CI checks them.
+- `.gitlab-ci.yml` (GitLab, including a self-hosted instance). Test results
+  appear in the merge request widget; a `v*` tag adds the release jobs (see
+  [Releasing](releasing.md)).
+
+Both install the Poetry version named in `poetry.lock`'s header and the Python
+version in `.python-version`, so neither is pinned twice. The GitLab image tag
+repeats the Python minor in `PYTHON_VERSION`, and the job fails if that ever
+disagrees with `.python-version`.
 
 ## Adapting this starter
 
@@ -145,8 +155,9 @@ Everything a new project renames or changes, in one list:
 2. **Imports in tests**: the `from basic_api ...` lines at the top of
    `tests/conftest.py` and the test modules.
 3. **CI**: the `env` block and the `postgres` matrix entry at the top of
-   `.github/workflows/ci.yml`; nothing in the jobs refers to the project by
-   name.
+   `.github/workflows/ci.yml`, or the `variables` block and the postgres
+   service tag in `.gitlab-ci.yml`; nothing in the jobs refers to the project
+   by name. Delete the file for the host you do not use, or keep both.
 4. **Names shown to clients**: `title` and `description` in `main.py`, and
    `SERVICE_NAME` returned by `/health`.
 5. **Configuration**: add a variable in `config.py` and `.env.example` together.

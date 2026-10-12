@@ -23,7 +23,7 @@ configuration right. That work is done here, tested, and documented.
 - User self-service: read, update, change password and delete the own account
 - Async PostgreSQL through SQLModel and asyncpg; health check that pings it
 - One `config.py` reads and validates every environment variable at startup
-- black, flake8 and mypy clean; pytest suite; GitHub Actions lint and test jobs
+- black, flake8 and mypy clean; pytest suite; lint and test pipelines for GitHub Actions and GitLab CI
 
 ## Documentation
 
@@ -34,7 +34,7 @@ configuration right. That work is done here, tested, and documented.
 | [Authentication](docs/authentication.md) | API key, login flow, token lifetime, what invalidates a token, rate limits, errors |
 | [API Reference](docs/api.md) | Every endpoint with status codes, response envelope and error shape |
 | [Schemas](docs/schemas.md) | Request and response models with their limits |
-| [Releasing](docs/releasing.md) | `scripts/release.py`: version bump, changelog, tag, GitHub release; writing the notes |
+| [Releasing](docs/releasing.md) | `scripts/release.py`: version bump, changelog, tag, release on GitHub or GitLab; writing the notes |
 | [Known Issues](docs/known_issues.md) | What the starter deliberately does not do yet |
 | [Changelog](CHANGELOG.md) | What changed and when |
 
@@ -62,7 +62,8 @@ basic_api/
       users.py        # Business rules for users, independent of HTTP
   tests/              # pytest suite; database-backed and pure tests
   docs/               # Written documentation
-  .github/workflows/ci.yml
+  .github/workflows/     # ci.yml and release.yml (GitHub Actions)
+  .gitlab-ci.yml         # the same jobs for GitLab
 pyproject.toml        # Poetry project, dev group, black and mypy config
 .env.example          # Every variable, grouped, with its default
 ```
@@ -123,7 +124,7 @@ poetry run black --check src tests && poetry run flake8 src tests && poetry run 
 ```
 
 CI runs the same three checks and the full suite against `postgres:17` on every
-push and pull request.
+push and pull or merge request, on GitHub Actions or GitLab.
 
 ## Adapting this starter
 

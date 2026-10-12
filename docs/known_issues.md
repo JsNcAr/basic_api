@@ -171,9 +171,9 @@ logging handler or ASGI middleware.
 
 ### CI has no coverage or secret scan
 
-**Where:** `.github/workflows/ci.yml`.
+**Where:** `.github/workflows/ci.yml`, `.gitlab-ci.yml`.
 
-The pipeline formats, lints, type-checks, audits dependencies (`pip-audit`)
+The pipelines format, lint, type-checks, audits dependencies (`pip-audit`)
 and tests, and Dependabot proposes updates. It does not measure coverage and
 does not scan for committed secrets.
 

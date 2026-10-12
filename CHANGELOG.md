@@ -34,6 +34,11 @@ notes (see [docs/releasing.md](docs/releasing.md)).
 - `cryptography` 46.0.3 to 50.0.2, closing seven published advisories (#7).
 
 ### Added
+- `.gitlab-ci.yml`: the same lint and test jobs as the GitHub workflow for a
+  GitLab instance (test results in the merge request widget), plus the release
+  jobs on a `v*` tag: verify, build, and a GitLab release created with `glab`
+  with the wheel and sdist in the generic package registry. The release script
+  prints the pipeline URL for GitHub or GitLab remotes (#18).
 - Release tooling: `scripts/release.py prepare patch|minor|major|X.Y.Z` runs
   the suite, bumps `pyproject.toml`, turns Unreleased into the version's
   section, commits, tags and pushes atomically; `.github/workflows/release.yml`

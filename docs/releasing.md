@@ -10,21 +10,29 @@ project built from it.
 ```text
 CHANGELOG.md "Unreleased"  -->  scripts/release.py prepare  -->  commit + tag vX.Y.Z  -->  push
                                                                                            |
-GitHub release (notes, wheel, sdist)  <--  publish  <--  build  <--  ci  <--  verify  <----+
+release page (notes, wheel, sdist)  <--  publish  <--  build  <--  lint + test  <--  verify  <-+
 ```
 
 - **The notes** are the `## [Unreleased]` section of [CHANGELOG.md](../CHANGELOG.md).
-  The script renames it to the version; the workflow publishes that section as
+  The script renames it to the version; the pipeline publishes that section as
   the release notes, word for word.
 - **The script** (`scripts/release.py`) bumps the version, updates the
   changelog, commits, tags, and pushes. The version lives in one place,
   `[project] version` in `pyproject.toml`; the app reads it from the installed
   package metadata (`APP_VERSION`, shown by `GET /` and the OpenAPI document).
-- **The workflow** (`.github/workflows/release.yml`) runs on the pushed tag:
+- **The pipeline** runs on the pushed tag, on either host:
   1. **verify**: the tag matches `pyproject.toml` and the notes exist.
-  2. **ci**: the same lint and test jobs as a pull request, PostgreSQL included.
+  2. **lint and test**: the same jobs as a pull or merge request, PostgreSQL
+     included.
   3. **build**: the wheel and the sdist (`poetry build`).
-  4. **publish**: one GitHub release, created only when everything passed.
+  4. **publish**: one release, created only when everything passed.
+
+  On GitHub that is `.github/workflows/release.yml` (a GitHub release with the
+  archives attached, marked pre-release when the version has a suffix). On
+  GitLab it is the tag pipeline in `.gitlab-ci.yml` (a GitLab release created
+  with `glab`; the archives go to the project's generic package registry and
+  are linked from the release page). Both repositories can hold both files; a
+  host ignores the other's.
 
 ## Choosing the version
 
@@ -41,8 +49,9 @@ a client of this API would notice.
 The commit type cannot tell the script that a `feat` broke a client; you choose
 the part. For a test deployment ahead of a release, give an explicit
 pre-release version: `prepare 1.0.0-rc.1`. It is published as a **pre-release**,
-so GitHub does not show it as "Latest". A later `prepare patch|minor|major`
-from `1.0.0-rc.N` finishes it as `1.0.0`.
+so GitHub does not show it as "Latest" (GitLab has no pre-release flag; the
+suffix in the name is the signal). A later `prepare patch|minor|major` from
+`1.0.0-rc.N` finishes it as `1.0.0`.
 
 A pre-release spelled `1.0.0-rc.1` is valid PEP 440, and the installed metadata
 normalises it: `GET /` reports `1.0.0rc1`. The tag and the changelog keep the
@@ -98,7 +107,7 @@ The script:
    server reports the new version; the installed metadata is written at
    install time, not read from `pyproject.toml`.
 8. Asks, then pushes `main` and the tag in one atomic push, which starts the
-   workflow.
+   pipeline, and prints where to watch it.
 
 Answer **no** at the push question, or pass `--no-push`, to stop with
 everything still local. Push later with the command it prints, or undo with:
@@ -110,12 +119,20 @@ git tag -d vX.Y.Z && git reset --hard HEAD~1
 Other options: `--skip-tests` when you have just run them; `--yes` answers every
 question, for scripted use; `--allow-branch` releases from another branch.
 
-### 5. Watch the workflow and check the release
+### 5. Watch the pipeline and check the release
 
-Open the repository's **Actions** tab. The release appears under **Releases**
-when *publish* finishes. Check that the notes read correctly, the wheel and the
-sdist are attached, and a deployment of the tag answers the new version on
-`GET /`.
+Open the repository's **Actions** tab (GitHub) or **Build > Pipelines**
+(GitLab). The release appears under **Releases** (GitHub) or **Deploy >
+Releases** (GitLab) when the last job finishes. Check that the notes read
+correctly, the wheel and the sdist are attached, and a deployment of the tag
+answers the new version on `GET /`.
+
+On GitLab, the first release of a project is also the first test of the job
+token's rights: if `release` fails uploading the archives (a 401 or 403 from
+the package registry), check that **Settings > General > Visibility > Package
+registry** is on and that the job token is allowed to reach the project
+(**Settings > CI/CD > Job token permissions**). Nothing was published; fix and
+rerun the job.
 
 ## The starter and its clones
 
@@ -129,7 +146,7 @@ starter = true
 
 A project built from the starter sets it to `false` once (it is in the
 [Adapting this starter](setup.md#adapting-this-starter) list) and inherits the
-script, the workflow, the test and this page unchanged; nothing in them names
+script, both pipelines, the test and this page unchanged; nothing in them names
 the project. The first release works from a repository with no tags: the
 Unreleased section is the notes, and if it is empty the script lists every
 conventional commit in the history, so write the section. Start wherever the
@@ -209,7 +226,8 @@ Each entry is the summary with its scope in bold and the short commit hash.
 
   ```bash
   python scripts/release.py notes X.Y.Z > notes.md
-  gh release edit vX.Y.Z --notes-file notes.md
+  gh release edit vX.Y.Z --notes-file notes.md        # GitHub
+  glab release create vX.Y.Z --notes-file notes.md    # GitLab: updates an existing release
   ```
 
   The annotated tag keeps the original text; that is expected.
@@ -224,8 +242,8 @@ Each entry is the summary with its scope in bold and the short commit hash.
 | Tests fail in `prepare` | Nothing was written. Fix on `main` first. |
 | The push was rejected (branch protection on `main`) | Nothing was pushed: the push is atomic. Allow the push for the release commit, or push it through a PR and push the tag after merging (`git push origin vX.Y.Z`; the tag must point at the merged commit). |
 | *verify* fails | The tag was not made by the script, or `pyproject.toml` was edited by hand. Delete the tag (`git push --delete origin vX.Y.Z && git tag -d vX.Y.Z`), fix, release again. Nothing was published. |
-| *ci* or *build* fails | Nothing is published. A flaky runner: **Re-run failed jobs**. Code at fault: fix on `main`, delete the tag as above, release the next patch version rather than reusing the number. |
-| *publish* fails | Re-run the failed job; the archives from *build* are reused. |
+| *lint*, *test* or *build* fails | Nothing is published. A flaky runner: rerun the failed job. Code at fault: fix on `main`, delete the tag as above, release the next patch version rather than reusing the number. |
+| *publish* (GitHub) or *release* (GitLab) fails | Rerun the failed job; the archives from *build* are reused. |
 | `GET /` still shows the old version on your machine | `poetry install --only-root`. |
 
 Never re-point or reuse a tag that has a published release. Release the next
