@@ -34,6 +34,7 @@ configuration right. That work is done here, tested, and documented.
 | [Authentication](docs/authentication.md) | API key, login flow, token lifetime, what invalidates a token, rate limits, errors |
 | [API Reference](docs/api.md) | Every endpoint with status codes, response envelope and error shape |
 | [Schemas](docs/schemas.md) | Request and response models with their limits |
+| [Releasing](docs/releasing.md) | `scripts/release.py`: version bump, changelog, tag, GitHub release; writing the notes |
 | [Known Issues](docs/known_issues.md) | What the starter deliberately does not do yet |
 | [Changelog](CHANGELOG.md) | What changed and when |
 

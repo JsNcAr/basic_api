@@ -25,6 +25,8 @@ client API key, rate limits, user self-service, tests and CI.
 - [API Reference](api.md): every endpoint with status codes, the response
   envelope and the error shape.
 - [Schemas](schemas.md): request and response models with their limits.
+- [Releasing](releasing.md): one command to bump the version, write the
+  changelog, tag and publish; how to write the notes.
 - [Known Issues](known_issues.md): what the starter deliberately leaves for a
   real project to decide.
 - [Changelog](../CHANGELOG.md).

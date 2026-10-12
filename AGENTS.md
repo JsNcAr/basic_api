@@ -44,15 +44,19 @@ src/basic_api/
   schemas/         # user models and schemas, SuccessResponse
   services/        # business rules (users)
 tests/             # conftest (test database), database-backed and pure tests
-docs/              # setup, authentication, api, schemas, known_issues
+scripts/release.py # version bump, changelog, tag, push (clones only; see docs/releasing.md)
+docs/              # setup, authentication, api, schemas, releasing, known_issues
 ```
 
 ## Common Commands
 * **Start dev server**: `poetry run uvicorn basic_api.main:app --reload --app-dir src`
 * **Test**: `poetry run pytest` (needs PostgreSQL; `--noconftest` plus the pure
   test files runs without one)
-* **Format & lint**: `poetry run black src tests && poetry run flake8 src tests`
-* **Type check**: `poetry run mypy`
+* **Format & lint**: `poetry run black src tests scripts && poetry run flake8 src tests scripts`
+* **Type check**: `poetry run mypy` (covers `src` and `scripts`)
+* **Release** (in a clone, never in the starter): `poetry run python scripts/release.py prepare minor`;
+  `--dry-run` first. The version lives only in `pyproject.toml`; Unreleased in
+  `CHANGELOG.md` becomes the notes. `.github/workflows/release.yml` publishes the tag.
 * **Dependency audit**: `poetry run pip-audit` (CI runs it in `lint`)
 * **Dependencies**: `poetry add <pkg>` (dev tools: `--group dev`), then `poetry install`.
   Ranges in `pyproject.toml` are open to the next major; `poetry.lock` is the pin.

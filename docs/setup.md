@@ -109,7 +109,8 @@ Tests that need no database can run anywhere:
 
 ```bash
 poetry run pytest --noconftest tests/test_auth_units.py tests/test_user_schemas.py \
-    tests/test_openapi.py tests/test_config.py tests/test_limiter.py
+    tests/test_openapi.py tests/test_config.py tests/test_limiter.py \
+    tests/test_logging_config.py tests/test_request_id.py tests/test_release_script.py
 ```
 
 Deprecation warnings are not silenced; a new one in the summary is information,
@@ -118,8 +119,8 @@ not noise.
 ## Code quality
 
 ```bash
-poetry run black --check src tests   # formatting, line length 88
-poetry run flake8 src tests          # lint (.flake8 matches Black)
+poetry run black --check src tests scripts   # formatting, line length 88
+poetry run flake8 src tests scripts          # lint (.flake8 matches Black)
 poetry run mypy                      # types, [tool.mypy] in pyproject.toml
 ```
 
@@ -149,7 +150,10 @@ Everything a new project renames or changes, in one list:
 4. **Names shown to clients**: `title` and `description` in `main.py`, and
    `SERVICE_NAME` returned by `/health`.
 5. **Configuration**: add a variable in `config.py` and `.env.example` together.
-6. **Docs**: this folder and the README.
+6. **Releases**: set `starter = false` under `[tool.release]` in
+   `pyproject.toml`; the release command then works (see [Releasing](releasing.md)).
+   The starter itself stays at `0.1.0`.
+7. **Docs**: this folder and the README.
 
 ## Debugging a hung process
 
