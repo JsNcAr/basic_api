@@ -118,6 +118,39 @@ def test_write_version_touches_only_the_project_version():
     assert updated.replace('version = "0.2.0"', 'version = "0.1.0"', 1) == PYPROJECT
 
 
+# -- remotes ------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "remote, expected",
+    [
+        (
+            "git@github.com:JsNcAr/basic_api.git",
+            "https://github.com/JsNcAr/basic_api/actions",
+        ),
+        (
+            "https://github.com/JsNcAr/basic_api",
+            "https://github.com/JsNcAr/basic_api/actions",
+        ),
+        (
+            "ssh://git@gitlab.example.net:2222/group/sub/repo.git",
+            "https://gitlab.example.net/group/sub/repo/-/pipelines",
+        ),
+        (
+            "git@gitlab.example.net:group/repo.git",
+            "https://gitlab.example.net/group/repo/-/pipelines",
+        ),
+        (
+            "https://gitlab.example.net/group/repo.git",
+            "https://gitlab.example.net/group/repo/-/pipelines",
+        ),
+        ("", "<the repository's CI page>"),
+    ],
+)
+def test_pipelines_url_handles_github_and_gitlab_remotes(remote, expected):
+    assert release.pipelines_url(remote) == expected
+
+
 # -- changelog ----------------------------------------------------------------
 
 
