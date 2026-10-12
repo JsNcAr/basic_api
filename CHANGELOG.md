@@ -1,7 +1,9 @@
 # Changelog
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follow
-`pyproject.toml`.
+`pyproject.toml`. Add entries under **Unreleased** in the same pull request as
+the change; `scripts/release.py` turns that section into the next release's
+notes (see [docs/releasing.md](docs/releasing.md)).
 
 ## [Unreleased]
 
@@ -32,6 +34,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions follo
 - `cryptography` 46.0.3 to 50.0.2, closing seven published advisories (#7).
 
 ### Added
+- Release tooling: `scripts/release.py prepare patch|minor|major|X.Y.Z` runs
+  the suite, bumps `pyproject.toml`, turns Unreleased into the version's
+  section, commits, tags and pushes atomically; `.github/workflows/release.yml`
+  verifies the tag, reruns CI, builds the wheel and sdist and publishes the
+  GitHub release with that section as notes. The starter itself stays
+  unreleased behind `[tool.release] starter = true`; a clone flips it (#17).
 - Logging configuration (`logging_config.py`): `LOG_LEVEL`, `LOG_FORMAT`
   (`json` lines in production by default, `text` elsewhere), and a
   QueueHandler/QueueListener pipeline from the standard library so that

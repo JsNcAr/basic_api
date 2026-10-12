@@ -21,10 +21,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # release.yml runs these same jobs on a pushed v* tag.
+  workflow_call:
 
 env:
   # Paths black and flake8 check; mypy takes its paths from [tool.mypy].
-  CODE_PATHS: src tests
+  CODE_PATHS: src tests scripts
   # Throwaway database for the test job. None of these are secrets. The values
   # feed both the postgres service and tests/conftest.py, which builds the test
   # database URL from DB_*; change TEST_DB_NAME if the project's conftest

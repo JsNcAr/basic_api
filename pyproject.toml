@@ -28,6 +28,11 @@ dependencies = [
 [tool.poetry]
 packages = [{include = "basic_api", from = "src"}]
 
+[tool.release]
+# The starter is never released: scripts/release.py refuses while this is true.
+# In a project built from it, set it to false once (docs/releasing.md).
+starter = true
+
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -53,7 +58,7 @@ target-version = ["py314"]
 [tool.mypy]
 # Keep python_version in step with requires-python; files follows the src/ layout.
 python_version = "3.14"
-files = ["src"]
+files = ["src", "scripts"]
 plugins = ["pydantic.mypy"]
 check_untyped_defs = true
 warn_unused_ignores = true
