@@ -28,6 +28,11 @@ dependencies = [
 [tool.poetry]
 packages = [{include = "basic_api", from = "src"}]
 
+[tool.release]
+# The starter is never released: scripts/release.py refuses while this is true.
+# In a project built from it, set it to false once (docs/releasing.md).
+starter = true
+
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
