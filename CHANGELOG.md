@@ -25,6 +25,13 @@ notes (see [docs/releasing.md](docs/releasing.md)).
   pycparser from the dependency tree; HS256 needs none of them (#9).
 
 ### Dependencies
+- Refresh before the move to Python 3.15: pydantic 2.13.5 to 2.14.1 with
+  pydantic-core 2.50.1, the first release with Python 3.15 wheels; FastAPI
+  0.142.2 to 0.143.1; Starlette 1.7.0 to 1.8.0; Black 26.10.0 to 26.10.1 and
+  the transitive updates Poetry resolved. FastAPI 0.143 makes its automatic
+  OpenTelemetry exporter setup opt-in, which changes nothing here because the
+  starter configures no telemetry. SQLAlchemy stays on 2.0.x by choice, see
+  the comment in `pyproject.toml` (#19).
 - Every dependency moved to its current release and the ranges in
   `pyproject.toml` opened to the next major (`poetry.lock` is the pin):
   FastAPI 0.121 to 0.142, Starlette 0.49 to 1.7, uvicorn 0.38 to 0.54,
