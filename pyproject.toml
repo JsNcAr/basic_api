@@ -17,11 +17,10 @@ dependencies = [
     "python-multipart (>=0.0.32,<1.0)",
     "pydantic[email] (>=2.13.5,<3.0)",
     "sqlmodel (>=0.0.48,<1.0)",
-    # SQLAlchemy is SQLModel's dependency; constrained here because 2.1 is a new
-    # minor with behaviour changes (SQLModel allows up to <2.2), so moving to it is
-    # its own change. 2.1.x ships wheels for Python 3.11 to 3.15; 2.0.x stops at 3.14
-    # and installs as pure Python on 3.15.
-    "sqlalchemy (>=2.0.54,<2.1)",
+    # Declared although SQLModel depends on it: database.py and services import
+    # SQLAlchemy directly, and since 2.1 greenlet, which the asyncio extension
+    # needs, is only installed through the [asyncio] extra.
+    "sqlalchemy[asyncio] (>=2.1.4,<3.0)",
     "asyncpg (>=0.32.0,<1.0)",
     "slowapi (>=0.1.10,<1.0)",
     "pyjwt (>=2.15.1,<3)",
