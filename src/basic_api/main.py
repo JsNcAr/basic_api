@@ -24,11 +24,10 @@ from contextlib import asynccontextmanager
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Query, Request, Response
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
-from slowapi.errors import RateLimitExceeded
 from starlette.middleware.body_limit import RequestBodyLimitMiddleware
 
 from .auth import access_token_lifetime, authenticate_user, create_access_token
@@ -45,7 +44,12 @@ from .config import (
 from .database import engine, init_db, ping
 from .dependencies import CurrentUserDep, SessionDep
 from .exceptions import IdentifierTakenError, PasswordVerificationError
-from .limiter import RATE_LIMIT_LOGIN, limiter, rate_limit_exceeded_handler
+from .limiter import (
+    RATE_LIMIT_LOGIN,
+    RateLimitExceeded,
+    limiter,
+    rate_limit_exceeded_handler,
+)
 from .logging_config import configure_logging
 from .request_id import REQUEST_ID_HEADER, RequestIdMiddleware
 from .routers import auth, users
@@ -90,7 +94,6 @@ app = FastAPI(
     openapi_url="/openapi.json" if ENABLE_DOCS else None,
 )
 
-app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 
@@ -178,11 +181,9 @@ async def health_check():
     "/token",
     response_model=TokenResponse,
     responses=error_responses(401, 403, 413, 429),
+    dependencies=[Depends(limiter.limit(RATE_LIMIT_LOGIN))],
 )
-@limiter.limit(RATE_LIMIT_LOGIN)
 async def login(
-    request: Request,
-    response: Response,  # slowapi writes the X-RateLimit headers onto it
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     session: SessionDep,
     expires_delta: Annotated[
@@ -203,8 +204,6 @@ async def login(
     `username` may be a username, an email address or a phone number.
 
     Args:
-        request: Needed by the rate limiter (injected).
-        response: Receives the X-RateLimit headers from the limiter (injected).
         form_data: OAuth2 password form with `username` and `password` fields.
         expires_delta: Requested token lifetime (query parameter); the server
             caps it, see access_token_lifetime.

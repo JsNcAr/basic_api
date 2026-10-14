@@ -24,7 +24,6 @@ looks like. Remove an entry in the same change that fixes it.
 | Code | [Startup validation and the login limit are untested](#startup-validation-and-the-login-limit-are-untested) | Low |
 | Code | [Application code detects the test runner](#application-code-detects-the-test-runner) | Low |
 | Code | [The root banner reports healthy without checking](#the-root-banner-reports-healthy-without-checking) | Low |
-| Dependencies | [slowapi calls an asyncio API removed in Python 3.16](#slowapi-calls-an-asyncio-api-removed-in-python-316) | Low |
 
 ---
 
@@ -152,8 +151,8 @@ effective limit; a restart resets it. Behind a reverse proxy on another host,
 uvicorn must be told to trust its forwarded headers (`--forwarded-allow-ips`),
 or every client shares one bucket.
 
-**Fix:** shared storage for the counts (slowapi supports Redis) when running
-more than one worker.
+**Fix:** shared storage for the counts (`limits` has Redis, Memcached and
+MongoDB storages) when running more than one worker.
 
 ### No metrics, tracing or error tracking
 
@@ -247,23 +246,3 @@ healthy service with its database down.
 
 **Fix:** drop the `status` field from the banner, or have it call the same
 `ping()` as `/health`.
-
----
-
-## Dependencies
-
-### slowapi calls an asyncio API removed in Python 3.16
-
-**Where:** `slowapi/extension.py` (version 0.1.10), surfaced by `pytest.ini`.
-
-On Python 3.14 and 3.15 the test run reports `DeprecationWarning: 'asyncio.iscoroutinefunction'
-is deprecated and slated for removal in Python 3.16; use
-inspect.iscoroutinefunction()`, raised from slowapi when it wraps a rate-limited
-route. Nothing is wrong today; on Python 3.16 the rate limiter would stop
-working unless slowapi releases a fix. `pytest.ini` filters this one warning
-for the `slowapi` module only, so the summary stays readable; the filter must go
-when slowapi fixes it or when this project replaces slowapi.
-
-**Fix:** upgrade slowapi once a release uses `inspect.iscoroutinefunction`, then
-remove the filter; if none appears before 3.16 matters, replace slowapi (the
-limiter lives in one module, `limiter.py`).
