@@ -163,17 +163,18 @@ Logging is configured (`logging_config.py`: levels, JSON or text lines, a
 request id on every line and response), but there are no metrics, no traces
 and no error tracker: a 500 is a log line, not an alert.
 
-**Fix:** for tracing and metrics, FastAPI 0.142's native OpenTelemetry
-(`FastAPI(telemetry={...})`, with `auto_configure` reading the standard `OTEL_*`
-variables) is the path; it needs `opentelemetry-sdk` and an OTLP exporter
-installed to emit anything. An error tracker (Sentry or similar) hooks in as a
+**Fix:** for tracing and metrics, FastAPI's native OpenTelemetry
+(`FastAPI(telemetry={...})`) is the path. Since FastAPI 0.143 the automatic
+exporter setup from the standard `OTEL_*` variables is opt-in:
+`telemetry={"auto_configure": True}` or `FASTAPI_OTEL_AUTO_CONFIGURE=true`. It
+needs `opentelemetry-sdk` and an OTLP exporter installed to emit anything. An error tracker (Sentry or similar) hooks in as a
 logging handler or ASGI middleware.
 
 ### CI has no coverage or secret scan
 
-**Where:** `.github/workflows/ci.yml`.
+**Where:** `.github/workflows/ci.yml`, `.gitlab-ci.yml`.
 
-The pipeline formats, lints, type-checks, audits dependencies (`pip-audit`)
+The pipelines format, lint, type-checks, audits dependencies (`pip-audit`)
 and tests, and Dependabot proposes updates. It does not measure coverage and
 does not scan for committed secrets.
 

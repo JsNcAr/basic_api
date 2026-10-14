@@ -7,7 +7,7 @@ Poetry-managed.
 * **Environment**: the app refuses to start without `DATABASE_URL`, `API_KEY`
   and a 32+ byte `JWT_SECRET_KEY` (`src/basic_api/config.py`); copy
   `.env.example` to `.env`. A dev machine may have no PostgreSQL: database
-  tests then run only in CI.
+  tests then run only in CI (`.github/workflows/ci.yml` and `.gitlab-ci.yml`, kept in step).
 * **Configuration**: add a variable in `config.py` and `.env.example` together;
   nothing else reads the environment.
 * **Errors**: routers translate domain exceptions (`exceptions.py`) to status
@@ -56,7 +56,8 @@ docs/              # setup, authentication, api, schemas, releasing, known_issue
 * **Type check**: `poetry run mypy` (covers `src` and `scripts`)
 * **Release** (in a clone, never in the starter): `poetry run python scripts/release.py prepare minor`;
   `--dry-run` first. The version lives only in `pyproject.toml`; Unreleased in
-  `CHANGELOG.md` becomes the notes. `.github/workflows/release.yml` publishes the tag.
+  `CHANGELOG.md` becomes the notes. `.github/workflows/release.yml` (GitHub) or the
+  tag jobs in `.gitlab-ci.yml` (GitLab) publish the tag.
 * **Dependency audit**: `poetry run pip-audit` (CI runs it in `lint`)
 * **Dependencies**: `poetry add <pkg>` (dev tools: `--group dev`), then `poetry install`.
   Ranges in `pyproject.toml` are open to the next major; `poetry.lock` is the pin.

@@ -15,9 +15,10 @@ carrying the notes, and asks before pushing both in one atomic push. Until that
 push nothing has left your machine; undo it with
 `git tag -d vX.Y.Z && git reset --hard HEAD~1`.
 
-Pushing a `v*` tag starts `.github/workflows/release.yml`, which checks the tag
-against `pyproject.toml`, runs the CI workflow, builds the wheel and sdist, and
-publishes a GitHub release whose notes are this version's CHANGELOG.md section.
+Pushing a `v*` tag starts the release pipeline (`.github/workflows/release.yml`
+on GitHub, `.gitlab-ci.yml` on GitLab), which checks the tag against
+`pyproject.toml`, runs lint and tests, builds the wheel and sdist, and publishes
+a release whose notes are this version's CHANGELOG.md section.
 
 The starter is never released: `prepare` refuses while `[tool.release]
 starter = true` in pyproject.toml. A clone sets it to false once (see
@@ -429,22 +430,44 @@ def cmd_prepare(args: argparse.Namespace) -> None:
     refresh_installed_metadata()
 
     push = ["push", "--atomic", REMOTE, branch, tag]
-    question = f"Push {branch} and {tag} to {REMOTE} (starts the release workflow)?"
+    question = f"Push {branch} and {tag} to {REMOTE} (starts the release pipeline)?"
     if args.no_push or not confirm(question, args.yes):
         print(f"Not pushed. When ready:  git {' '.join(push)}")
         print(f"To undo instead:         git tag -d {tag} && git reset --hard HEAD~1")
         return
     git(*push)
-    print(
-        "Pushed. The release workflow is running: "
-        f"https://github.com/{repo_slug()}/actions"
+    print(f"Pushed. The release pipeline is running: {pipelines_url(remote_url())}")
+
+
+def remote_url() -> str:
+    return git("remote", "get-url", REMOTE, check=False)
+
+
+def pipelines_url(remote: str) -> str:
+    """
+    Where the release pipeline shows up, from the remote URL.
+
+    Handles the three spellings git uses: `git@host:group/repo.git`,
+    `ssh://git@host:port/group/repo.git` and `https://host/group/repo.git`.
+    GitHub shows pipelines under /actions, GitLab under /-/pipelines.
+
+    Args:
+        remote: Output of `git remote get-url`.
+
+    Returns:
+        A URL, or a short hint when the remote is not recognised.
+    """
+    match = re.match(
+        r"^(?:[a-z+]+://)?(?:[^@/]+@)?(?P<host>[^:/]+)(?::\d+)?"
+        r"[:/](?P<path>.+?)(?:\.git)?/?$",
+        remote.strip(),
     )
-
-
-def repo_slug() -> str:
-    url = git("remote", "get-url", REMOTE, check=False)
-    match = re.search(r"github\.com[:/](.+?)(?:\.git)?$", url)
-    return match.group(1) if match else "<owner>/<repo>"
+    if not match:
+        return "<the repository's CI page>"
+    host, path = match["host"], match["path"]
+    if host == "github.com":
+        return f"https://{host}/{path}/actions"
+    return f"https://{host}/{path}/-/pipelines"
 
 
 def write_outputs(fh: TextIO, version: str) -> None:
