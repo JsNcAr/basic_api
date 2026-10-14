@@ -253,7 +253,7 @@ if MAX_REQUEST_BODY_BYTES < 1:
     raise RuntimeError("MAX_REQUEST_BODY_BYTES must be a positive integer")
 
 # --- Rate limits -------------------------------------------------------------
-# slowapi/limits syntax, e.g. "10/minute", "100/hour"; validated in limiter.py.
+# `limits` syntax, e.g. "10/minute", "100/hour"; validated in limiter.py.
 # Per client IP and per process (each uvicorn worker keeps its own count).
 RATE_LIMIT_LOGIN = os.getenv("RATE_LIMIT_LOGIN", "60/minute")
 RATE_LIMIT_REGISTER = os.getenv("RATE_LIMIT_REGISTER", "10/minute")

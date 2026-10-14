@@ -19,7 +19,7 @@ configuration right. That work is done here, tested, and documented.
   time and return the same body
 - Passwords hashed with bcrypt over a SHA-256 pre-hash, off the event loop
 - Client API key as a declared OpenAPI security scheme on every `/api` route
-- Rate limits per client IP on login and registration (slowapi)
+- Rate limits per client IP on login and registration (`limits`)
 - User self-service: read, update, change password and delete the own account
 - Async PostgreSQL through SQLModel and asyncpg; health check that pings it
 - One `config.py` reads and validates every environment variable at startup

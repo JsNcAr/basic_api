@@ -29,7 +29,7 @@ async def test_registration_is_limited_per_client(client):
 
 
 async def test_limited_responses_report_the_remaining_budget(client):
-    """slowapi's headers: the limit, what is left of it, and when it resets."""
+    """The budget headers: the limit, what is left of it, and when it resets."""
     limiter.enabled = True
     limiter.reset()
     try:

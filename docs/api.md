@@ -30,7 +30,8 @@ same id; quote it when reporting a problem.
 
 **Rate limits**: `POST /token` and `POST /api/users/` answer with
 `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` (Unix
-time at which the window resets); over the limit, a `429` with `Retry-After`.
+time at which the window resets); over the limit, a `429` with `Retry-After`
+and the same three headers with nothing remaining.
 
 **Auth** column: `key` is the `X-API-Key` header, `token` is
 `Authorization: Bearer <jwt>`. See [Authentication](authentication.md) for the

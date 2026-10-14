@@ -80,6 +80,15 @@ notes (see [docs/releasing.md](docs/releasing.md)).
   `RequestBodyLimitMiddleware` answers 413 before any route runs (#13).
 
 ### Changed
+- The rate limiter is built directly on `limits` (fixed window, in-process
+  memory) instead of slowapi, whose `asyncio.iscoroutinefunction` call is
+  removed in Python 3.16 and unfixed upstream. A limited route now declares
+  `Depends(limiter.limit(...))` instead of a decorator plus `request` and
+  `response` parameters it never used. Same limits, same per-IP and per-route
+  counting, same `429` body and `Retry-After`; the `429` now also carries the
+  `X-RateLimit` headers, and `X-RateLimit-Reset` is a whole number of seconds.
+  The `pytest.ini` warning filter for slowapi is gone, so the suite runs with
+  no filtered warnings (#22).
 - Python 3.15: `.python-version` says `3.15`, `requires-python` is
   `>=3.15,<4.0`, Black targets `py315`, mypy checks against 3.15 and the GitLab
   pipeline runs on `python:3.15-slim`. Every dependency ships a 3.15 wheel or is
