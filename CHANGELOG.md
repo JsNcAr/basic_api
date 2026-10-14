@@ -25,6 +25,15 @@ notes (see [docs/releasing.md](docs/releasing.md)).
   pycparser from the dependency tree; HS256 needs none of them (#9).
 
 ### Dependencies
+- SQLAlchemy 2.0.54 to 2.1.4, declared as `sqlalchemy[asyncio]` because 2.1
+  installs greenlet, which the asyncio extension needs, only through that
+  extra. 2.1 ships a Python 3.15 wheel, so the Cython speedups are back on
+  3.15. Of the 2.1 behaviour changes, none reaches this code: the database
+  URL names `asyncpg` explicitly (2.1 defaults `postgresql://` to psycopg 3),
+  there are no PostgreSQL named types, and autoflush now also runs before
+  Core statements such as the health check's `SELECT 1`, which never has
+  pending changes. The suite passes with every SQLAlchemy warning as an error.
+  SQLModel 0.0.48 added 2.1 support (#21).
 - Refresh before the move to Python 3.15: pydantic 2.13.5 to 2.14.1 with
   pydantic-core 2.50.1, the first release with Python 3.15 wheels; FastAPI
   0.142.2 to 0.143.1; Starlette 1.7.0 to 1.8.0; Black 26.10.0 to 26.10.1 and

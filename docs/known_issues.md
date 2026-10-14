@@ -252,20 +252,6 @@ healthy service with its database down.
 
 ## Dependencies
 
-### SQLAlchemy 2.0 runs without its C extensions on Python 3.15
-
-**Where:** `pyproject.toml` (`sqlalchemy (>=2.0.54,<2.1)`).
-
-SQLAlchemy 2.0.x publishes compiled wheels up to Python 3.14 only, so on 3.15
-pip installs the pure Python wheel and the Cython speedups (row processing,
-result collections) are replaced by their Python implementations. Everything
-works and the suite passes; result processing is slower than on 3.14 with the
-compiled wheel. SQLAlchemy 2.1.x ships Python 3.15 wheels.
-
-**Fix:** move to SQLAlchemy 2.1 (a new minor with behaviour changes, read its
-migration notes first; SQLModel 0.0.48 allows `<2.2`) and drop the `<2.1`
-constraint in `pyproject.toml`.
-
 ### slowapi calls an asyncio API removed in Python 3.16
 
 **Where:** `slowapi/extension.py` (version 0.1.10), surfaced by `pytest.ini`.

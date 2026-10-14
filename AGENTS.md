@@ -62,5 +62,5 @@ docs/              # setup, authentication, api, schemas, releasing, known_issue
 * **Dependencies**: `poetry add <pkg>` (dev tools: `--group dev`), then `poetry install`.
   Ranges in `pyproject.toml` are open to the next major; `poetry.lock` is the pin.
   Update with `poetry update` (or `poetry lock --regenerate` for every transitive
-  package) and run the suite. SQLAlchemy is held below 2.1 until it ships wheels.
+  package) and run the suite.
 * **Test database**: `createdb basic_api_test_db` and the `DB_*` variables
