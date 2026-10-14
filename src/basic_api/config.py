@@ -185,7 +185,7 @@ API_KEY = SecretStr(_required("API_KEY"))
 _ALLOWED_ALGORITHMS = ("HS256", "HS384", "HS512")
 # RFC 7518 section 3.2: an HMAC key should be at least as long as the hash it
 # drives. PyJWT 2.15 checks the same rule at sign and verify time.
-_SECRET_MINIMUM_BYTES = {"HS256": 32, "HS384": 48, "HS512": 64}
+_SECRET_MINIMUM_BYTES = frozendict({"HS256": 32, "HS384": 48, "HS512": 64})
 _MIN_BCRYPT_ROUNDS = 12
 
 

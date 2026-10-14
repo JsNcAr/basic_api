@@ -26,11 +26,13 @@ logger = logging.getLogger(__name__)
 # What a client is told when an identifier collides, per field, so a form can
 # mark the right input. Checked before the insert; the unique constraints are
 # the backstop for two requests racing past the checks.
-_TAKEN_MESSAGES = {
-    "username": "Username is already taken",
-    "email": "Email address is already registered",
-    "phone_number": "Phone number is already associated with an account",
-}
+_TAKEN_MESSAGES = frozendict(
+    {
+        "username": "Username is already taken",
+        "email": "Email address is already registered",
+        "phone_number": "Phone number is already associated with an account",
+    }
+)
 _RACE_MESSAGE = "A user with this username, email, or phone number already exists"
 
 

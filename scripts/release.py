@@ -64,14 +64,16 @@ STARTER_HINT = (
 
 # Conventional Commit type -> changelog heading, in display order. Types not
 # listed (chore, ci, test, build, style) are housekeeping and left out.
-SECTIONS = {
-    "feat": "Added",
-    "refactor": "Changed",
-    "perf": "Performance",
-    "fix": "Fixed",
-    "security": "Security",
-    "docs": "Documentation",
-}
+SECTIONS = frozendict(
+    {
+        "feat": "Added",
+        "refactor": "Changed",
+        "perf": "Performance",
+        "fix": "Fixed",
+        "security": "Security",
+        "docs": "Documentation",
+    }
+)
 BREAKING = "Breaking changes"
 COMMIT_RE = re.compile(
     r"^(?P<type>[a-z]+)(?:\((?P<scope>[^)]+)\))?(?P<bang>!)?: (?P<desc>.+)$"
