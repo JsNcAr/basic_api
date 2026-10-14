@@ -4,7 +4,7 @@ Database engine, session factory, startup schema and health ping.
 
 import asyncio
 import logging
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -69,7 +69,7 @@ async def ping(timeout: float = 2.0) -> bool:
         return False
 
 
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_session() -> AsyncGenerator[AsyncSession]:
     """One session per request; closed when the request ends."""
     async with async_session_factory() as session:
         yield session

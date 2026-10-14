@@ -33,8 +33,6 @@ Used by CI:
 Standard library only, so CI can run it before installing anything.
 """
 
-from __future__ import annotations
-
 import argparse
 import datetime as dt
 import os
@@ -89,7 +87,7 @@ class ReleaseError(Exception):
 
 def parse_version(text: str) -> tuple[int, int, int, str | None]:
     """Split X.Y.Z[-pre] into its parts, or raise ReleaseError."""
-    match = VERSION_RE.match(text.strip())
+    match = VERSION_RE.prefixmatch(text.strip())
     if not match:
         raise ReleaseError(f"not a version: {text!r} (expected X.Y.Z or X.Y.Z-rc.N)")
     major, minor, patch, pre = match.groups()
@@ -189,7 +187,7 @@ def render_section(commits: list[Commit]) -> str:
     """Changelog entries grouped by Conventional Commit type; '' if none."""
     groups: dict[str, list[str]] = {}
     for commit in commits:
-        match = COMMIT_RE.match(commit.subject)
+        match = COMMIT_RE.prefixmatch(commit.subject)
         if not match:
             continue  # not conventional (merges and the like): nothing to file it under
         kind, scope, desc = match["type"], match["scope"], match["desc"]
@@ -457,7 +455,7 @@ def pipelines_url(remote: str) -> str:
     Returns:
         A URL, or a short hint when the remote is not recognised.
     """
-    match = re.match(
+    match = re.prefixmatch(
         r"^(?:[a-z+]+://)?(?:[^@/]+@)?(?P<host>[^:/]+)(?::\d+)?"
         r"[:/](?P<path>.+?)(?:\.git)?/?$",
         remote.strip(),

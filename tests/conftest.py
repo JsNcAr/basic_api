@@ -11,7 +11,7 @@ a developer's own PostgreSQL and are overridden by the environment in CI
 
 import asyncio
 import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 from dotenv import load_dotenv
@@ -71,7 +71,7 @@ def pytest_unconfigure(config):
 
 
 @pytest.fixture
-async def session() -> AsyncGenerator[AsyncSession, None]:
+async def session() -> AsyncGenerator[AsyncSession]:
     """A session per test; every row is deleted afterwards."""
     async with async_session_maker() as session:
         yield session
@@ -84,7 +84,7 @@ async def session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture
-async def client(session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+async def client(session: AsyncSession) -> AsyncGenerator[AsyncClient]:
     """HTTP client over the app, sharing the test session and sending the API key."""
 
     def get_session_override():
