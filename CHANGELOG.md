@@ -71,6 +71,13 @@ notes (see [docs/releasing.md](docs/releasing.md)).
   `RequestBodyLimitMiddleware` answers 413 before any route runs (#13).
 
 ### Changed
+- Python 3.15: `.python-version` says `3.15`, `requires-python` is
+  `>=3.15,<4.0`, Black targets `py315`, mypy checks against 3.15 and the GitLab
+  pipeline runs on `python:3.15-slim`. Every dependency ships a 3.15 wheel or is
+  pure Python; SQLAlchemy 2.0.x installs as pure Python on 3.15 (Known Issues).
+  uvicorn 0.54.0 and FastAPI 0.143.1 pass the suite on 3.15, although uvicorn's
+  3.15 support is merged and unreleased and FastAPI's CI matrix still ends at
+  3.14 (#20).
 - Annotations use the current syntax: `X | None` instead of `Optional[X]`,
   `SuccessResponse` is a PEP 695 generic (`class SuccessResponse[T]`), and
   every route dependency is `Annotated`, through the `SessionDep` and
