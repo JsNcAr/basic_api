@@ -17,7 +17,7 @@ looks like. Remove an entry in the same change that fixes it.
 | Security | [Password policy is length only](#password-policy-is-length-only) | Low |
 | Data | [Schema is created at startup, not migrated](#schema-is-created-at-startup-not-migrated) | High |
 | Operations | [Rate limits are per IP and per process](#rate-limits-are-per-ip-and-per-process) | Low |
-| Operations | [No logging configuration or observability](#no-logging-configuration-or-observability) | Medium |
+| Operations | [No metrics, tracing or error tracking](#no-metrics-tracing-or-error-tracking) | Medium |
 | Operations | [CI has no coverage or secret scan](#ci-has-no-coverage-or-secret-scan) | Low |
 | Operations | [No deployment story](#no-deployment-story) | Low |
 | Code | [The demo route ships](#the-demo-route-ships) | Low |
