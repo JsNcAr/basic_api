@@ -13,6 +13,9 @@ Poetry-managed.
 * **Errors**: routers translate domain exceptions (`exceptions.py`) to status
   codes; services never import HTTP. Never put database error text in a
   response; log it with `logger.exception` and answer a generic message.
+  A `raise` inside `except` always chains: `from e` when the new error
+  translates the caught one, `from None` when the cause was already logged
+  and must not reach the client (the routers' 500s).
 * **Docstrings**: Google style (`Args`, `Returns`, `Raises`, `Example`); route
   docstrings render in Swagger, keep the curl examples current.
 * **Logging**: `logging.getLogger(__name__)` in a module; only

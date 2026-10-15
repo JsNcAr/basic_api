@@ -80,6 +80,14 @@ notes (see [docs/releasing.md](docs/releasing.md)).
   `RequestBodyLimitMiddleware` answers 413 before any route runs (#13).
 
 ### Changed
+- Every `raise` inside an `except` clause chains explicitly (PEP 3134): `from e`
+  where the new error translates the caught one (configuration parsing, the
+  rate-limit syntax check, the TOML read in the release script, the profile
+  URL validator, `IntegrityError` to `IdentifierTakenError`, PyJWT errors to
+  the 401), `from None` for the routers' generic 500s, whose cause is already
+  logged with `logger.exception`. Tracebacks now say whether an error was
+  caused by the one caught or raised while handling it; no response changes.
+  `AGENTS.md` records the rule (#25).
 - The test suite treats every warning as an error (`filterwarnings = error`
   in `pytest.ini`), and both CI test jobs start the interpreter with
   `-X warn_default_encoding`. A deprecation in this code or in a dependency,
