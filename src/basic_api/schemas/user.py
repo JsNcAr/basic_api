@@ -44,8 +44,8 @@ def validate_http_url(value: str | None) -> str | None:
         return None
     try:
         return str(_HTTP_URL.validate_python(value))
-    except ValidationError:
-        raise ValueError("profile_picture_url must be an http(s) URL")
+    except ValidationError as e:
+        raise ValueError("profile_picture_url must be an http(s) URL") from e
 
 
 # 1. Base model: fields shared by the table and the API schemas.

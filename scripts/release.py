@@ -154,7 +154,7 @@ def read_project(pyproject: str) -> Project:
     try:
         data = tomllib.loads(pyproject)
     except tomllib.TOMLDecodeError as e:
-        raise ReleaseError(f"pyproject.toml is not valid TOML: {e}")
+        raise ReleaseError(f"pyproject.toml is not valid TOML: {e}") from e
     project = data.get("project") or {}
     if "name" not in project or "version" not in project:
         raise ReleaseError("pyproject.toml needs name and version under [project]")

@@ -38,8 +38,8 @@ def _int(name: str, default: int) -> int:
         return default
     try:
         return int(raw)
-    except ValueError:
-        raise RuntimeError(f"{name}={raw!r} is not an integer")
+    except ValueError as e:
+        raise RuntimeError(f"{name}={raw!r} is not an integer") from e
 
 
 def _flag(name: str, default: bool) -> bool:
@@ -117,7 +117,7 @@ if LOG_LEVEL not in logging.getLevelNamesMapping():
 try:
     LOG_FORMAT = log_format(ENVIRONMENT, os.getenv("LOG_FORMAT"))
 except ValueError as e:
-    raise RuntimeError(str(e))
+    raise RuntimeError(str(e)) from e
 
 
 def _package_version() -> str:
@@ -204,10 +204,10 @@ def minimum_secret_bytes(algorithm: str) -> int:
     """
     try:
         return _SECRET_MINIMUM_BYTES[algorithm]
-    except KeyError:
+    except KeyError as e:
         raise ValueError(
             f"{algorithm!r} is not one of " + ", ".join(_ALLOWED_ALGORITHMS)
-        )
+        ) from e
 
 
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM") or "HS256"

@@ -91,9 +91,9 @@ async def create_user(session: AsyncSession, user_create: UserCreateSchema) -> U
     try:
         session.add(db_user)
         await session.commit()
-    except IntegrityError:
+    except IntegrityError as e:
         await session.rollback()
-        raise IdentifierTakenError(_RACE_MESSAGE)
+        raise IdentifierTakenError(_RACE_MESSAGE) from e
     await session.refresh(db_user)
     return db_user
 
@@ -132,9 +132,9 @@ async def update_user(
     try:
         session.add(db_user)
         await session.commit()
-    except IntegrityError:
+    except IntegrityError as e:
         await session.rollback()
-        raise IdentifierTakenError(_RACE_MESSAGE)
+        raise IdentifierTakenError(_RACE_MESSAGE) from e
     await session.refresh(db_user)
     return db_user
 

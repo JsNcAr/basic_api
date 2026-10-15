@@ -69,7 +69,7 @@ async def create_user(
     except Exception:
         await session.rollback()
         logger.exception("Failed to create user")
-        raise HTTPException(status_code=500, detail="Failed to create user")
+        raise HTTPException(status_code=500, detail="Failed to create user") from None
     return SuccessResponse(
         success=True, message="User created successfully", data=db_user
     )
@@ -143,7 +143,7 @@ async def update_current_user(
     except Exception:
         await session.rollback()
         logger.exception("Failed to update user")
-        raise HTTPException(status_code=500, detail="Failed to update user")
+        raise HTTPException(status_code=500, detail="Failed to update user") from None
     return SuccessResponse(
         success=True, message="Profile updated successfully", data=db_user
     )
@@ -192,7 +192,9 @@ async def change_password(
     except Exception:
         await session.rollback()
         logger.exception("Failed to change password")
-        raise HTTPException(status_code=500, detail="Failed to change password")
+        raise HTTPException(
+            status_code=500, detail="Failed to change password"
+        ) from None
     return SuccessResponse(
         success=True, message="Password changed successfully", data=None
     )
@@ -242,7 +244,9 @@ async def delete_current_user(
     except Exception:
         await session.rollback()
         logger.exception("Failed to delete user")
-        raise HTTPException(status_code=500, detail="Failed to delete user account")
+        raise HTTPException(
+            status_code=500, detail="Failed to delete user account"
+        ) from None
     return SuccessResponse(
         success=True, message="Account permanently deleted", data=None
     )

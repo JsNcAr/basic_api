@@ -36,7 +36,7 @@ for _name, _value in (
     try:
         parse_many(_value)
     except ValueError as e:
-        raise RuntimeError(f"{_name}={_value!r} is not a valid rate limit: {e}")
+        raise RuntimeError(f"{_name}={_value!r} is not a valid rate limit: {e}") from e
 
 
 class RateLimitExceeded(Exception):
