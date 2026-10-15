@@ -100,7 +100,8 @@ test:
     # The PostgreSQL major the project targets; CI on GitHub tests the same one.
     - postgres:17
   script:
-    - poetry run pytest --junitxml=report.xml
+    # -X warn_default_encoding: same as the GitHub job, see its comment.
+    - poetry run python -X warn_default_encoding -m pytest --junitxml=report.xml
   artifacts:
     when: always
     reports:

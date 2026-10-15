@@ -113,8 +113,16 @@ poetry run pytest --noconftest tests/test_auth_units.py tests/test_user_schemas.
     tests/test_logging_config.py tests/test_request_id.py tests/test_release_script.py
 ```
 
-Deprecation warnings are not silenced; a new one in the summary is information,
-not noise.
+Every warning is an error (`filterwarnings = error` in `pytest.ini`): a
+deprecation in this code or in a dependency fails the run instead of scrolling
+past in the summary. Fix it, update the dependency, or record it in
+[Known Issues](known_issues.md) with a narrow ignore. CI also starts the
+interpreter with `-X warn_default_encoding`, so a text read without an explicit
+encoding fails there; the same run locally is:
+
+```bash
+poetry run python -X warn_default_encoding -m pytest
+```
 
 ## Code quality
 

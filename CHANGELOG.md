@@ -80,6 +80,12 @@ notes (see [docs/releasing.md](docs/releasing.md)).
   `RequestBodyLimitMiddleware` answers 413 before any route runs (#13).
 
 ### Changed
+- The test suite treats every warning as an error (`filterwarnings = error`
+  in `pytest.ini`), and both CI test jobs start the interpreter with
+  `-X warn_default_encoding`. A deprecation in this code or in a dependency,
+  or a text read without an explicit encoding, now fails CI instead of
+  scrolling past in the summary; the suite was already clean under both, with
+  dependencies included (#24).
 - Python 3.15 idioms. Read-only module constants are `frozendict`
   (`_SECRET_MINIMUM_BYTES`, `_TAKEN_MESSAGES`, `_DESCRIPTIONS`, the release
   script's `SECTIONS`); generic aliases come from `collections.abc` with the

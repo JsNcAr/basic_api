@@ -54,7 +54,9 @@ docs/              # setup, authentication, api, schemas, releasing, known_issue
 ## Common Commands
 * **Start dev server**: `poetry run uvicorn basic_api.main:app --reload --app-dir src`
 * **Test**: `poetry run pytest` (needs PostgreSQL; `--noconftest` plus the pure
-  test files runs without one)
+  test files runs without one). Every warning is an error (`pytest.ini`); CI
+  adds `-X warn_default_encoding`, so run
+  `poetry run python -X warn_default_encoding -m pytest` before pushing.
 * **Format & lint**: `poetry run black src tests scripts && poetry run flake8 src tests scripts`
 * **Type check**: `poetry run mypy` (covers `src` and `scripts`)
 * **Release** (in a clone, never in the starter): `poetry run python scripts/release.py prepare minor`;
