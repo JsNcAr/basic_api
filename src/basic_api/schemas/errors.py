@@ -18,18 +18,20 @@ class ErrorDetail(BaseModel):
 
 
 # Code -> what it means in this API. Kept in step with docs/api.md.
-_DESCRIPTIONS: dict[int, str] = {
-    400: "A confirmation password was wrong",
-    401: (
-        "Missing or invalid X-API-Key; or missing, invalid, expired or orphaned "
-        "bearer token; or wrong login credentials"
-    ),
-    403: "The account is disabled",
-    409: "Username, email or phone number already in use",
-    413: "Request body over MAX_REQUEST_BODY_BYTES (plain-text body)",
-    429: "Over the rate limit; wait for Retry-After seconds",
-    503: "Database unreachable",
-}
+_DESCRIPTIONS: frozendict[int, str] = frozendict(
+    {
+        400: "A confirmation password was wrong",
+        401: (
+            "Missing or invalid X-API-Key; or missing, invalid, expired or orphaned "
+            "bearer token; or wrong login credentials"
+        ),
+        403: "The account is disabled",
+        409: "Username, email or phone number already in use",
+        413: "Request body over MAX_REQUEST_BODY_BYTES (plain-text body)",
+        429: "Over the rate limit; wait for Retry-After seconds",
+        503: "Database unreachable",
+    }
+)
 
 
 def error_responses(*codes: int) -> dict[int | str, dict[str, Any]]:

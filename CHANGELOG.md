@@ -80,6 +80,21 @@ notes (see [docs/releasing.md](docs/releasing.md)).
   `RequestBodyLimitMiddleware` answers 413 before any route runs (#13).
 
 ### Changed
+- Python 3.15 idioms. Read-only module constants are `frozendict`
+  (`_SECRET_MINIMUM_BYTES`, `_TAKEN_MESSAGES`, `_DESCRIPTIONS`, the release
+  script's `SECTIONS`); generic aliases come from `collections.abc` with the
+  single parameter 3.13+ allows; `scripts/release.py` uses `re.prefixmatch`
+  (3.15's explicit name for the soft-deprecated `match`), drops `from
+  __future__ import annotations` and names `encoding="utf-8"` on every file
+  and subprocess read, PEP 686's advice now that UTF-8 is the default, so
+  `-X warn_default_encoding` is clean. The setup guide adds the 3.15 sampling
+  profiler (`profiling.sampling`) next to the asyncio commands. Evaluated and
+  left unused, so the question need not be reopened: lazy imports (PEP 810;
+  the server imports everything at startup and the release script starts in
+  milliseconds), `sentinel` (no sentinel pattern), unpacking in comprehensions
+  (nothing to flatten), `TaskGroup.cancel` (no task groups), TypedDict
+  `closed` and `TypeForm` (no TypedDicts), free-threading and the JIT (nothing
+  CPU-bound) (#23).
 - The rate limiter is built directly on `limits` (fixed window, in-process
   memory) instead of slowapi, whose `asyncio.iscoroutinefunction` call is
   removed in Python 3.16 and unfixed upstream. A limited route now declares

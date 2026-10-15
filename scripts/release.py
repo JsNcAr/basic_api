@@ -33,8 +33,6 @@ Used by CI:
 Standard library only, so CI can run it before installing anything.
 """
 
-from __future__ import annotations
-
 import argparse
 import datetime as dt
 import os
@@ -66,14 +64,16 @@ STARTER_HINT = (
 
 # Conventional Commit type -> changelog heading, in display order. Types not
 # listed (chore, ci, test, build, style) are housekeeping and left out.
-SECTIONS = {
-    "feat": "Added",
-    "refactor": "Changed",
-    "perf": "Performance",
-    "fix": "Fixed",
-    "security": "Security",
-    "docs": "Documentation",
-}
+SECTIONS = frozendict(
+    {
+        "feat": "Added",
+        "refactor": "Changed",
+        "perf": "Performance",
+        "fix": "Fixed",
+        "security": "Security",
+        "docs": "Documentation",
+    }
+)
 BREAKING = "Breaking changes"
 COMMIT_RE = re.compile(
     r"^(?P<type>[a-z]+)(?:\((?P<scope>[^)]+)\))?(?P<bang>!)?: (?P<desc>.+)$"
@@ -89,7 +89,7 @@ class ReleaseError(Exception):
 
 def parse_version(text: str) -> tuple[int, int, int, str | None]:
     """Split X.Y.Z[-pre] into its parts, or raise ReleaseError."""
-    match = VERSION_RE.match(text.strip())
+    match = VERSION_RE.prefixmatch(text.strip())
     if not match:
         raise ReleaseError(f"not a version: {text!r} (expected X.Y.Z or X.Y.Z-rc.N)")
     major, minor, patch, pre = match.groups()
@@ -189,7 +189,7 @@ def render_section(commits: list[Commit]) -> str:
     """Changelog entries grouped by Conventional Commit type; '' if none."""
     groups: dict[str, list[str]] = {}
     for commit in commits:
-        match = COMMIT_RE.match(commit.subject)
+        match = COMMIT_RE.prefixmatch(commit.subject)
         if not match:
             continue  # not conventional (merges and the like): nothing to file it under
         kind, scope, desc = match["type"], match["scope"], match["desc"]
@@ -259,7 +259,10 @@ def release_notes(changelog: str, version: str) -> str:
 
 
 def git(*args: str, check: bool = True) -> str:
-    result = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
+    # UTF-8 is the 3.15 default; stated so the intent survives PYTHONUTF8=0.
+    result = subprocess.run(
+        ["git", *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8"
+    )
     if check and result.returncode != 0:
         raise ReleaseError(f"git {' '.join(args)} failed:\n{result.stderr.strip()}")
     return result.stdout.strip()
@@ -352,6 +355,7 @@ def refresh_installed_metadata() -> None:
         cwd=ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",
     )
     if result.returncode == 0:
         print("Reinstalled the project so APP_VERSION reports the new version.")
@@ -363,14 +367,18 @@ def refresh_installed_metadata() -> None:
 
 
 def cmd_prepare(args: argparse.Namespace) -> None:
-    project = read_project(PYPROJECT.read_text())
+    project = read_project(PYPROJECT.read_text(encoding="utf-8"))
     version = bump(project.version, args.part)
     tag = f"v{version}"
     preflight(project, tag, allow_branch=args.allow_branch)
 
     previous = last_tag()
     generated = render_section(commits_since(previous))
-    changelog = CHANGELOG.read_text() if CHANGELOG.exists() else UNRELEASED + "\n"
+    changelog = (
+        CHANGELOG.read_text(encoding="utf-8")
+        if CHANGELOG.exists()
+        else UNRELEASED + "\n"
+    )
     new_changelog, notes = add_release(changelog, version, generated, dt.date.today())
 
     print(
@@ -394,14 +402,16 @@ def cmd_prepare(args: argparse.Namespace) -> None:
         run_tests()
 
     files = {
-        PYPROJECT: write_version(PYPROJECT.read_text(), version),
+        PYPROJECT: write_version(PYPROJECT.read_text(encoding="utf-8"), version),
         CHANGELOG: new_changelog,
     }
-    originals = {p: p.read_text() if p.exists() else None for p in files}
+    originals = {
+        p: p.read_text(encoding="utf-8") if p.exists() else None for p in files
+    }
     relative = [str(p.relative_to(ROOT)) for p in files]
     try:
         for path, text in files.items():
-            path.write_text(text)
+            path.write_text(text, encoding="utf-8")
         editor = os.environ.get("VISUAL") or os.environ.get("EDITOR")
         if (
             editor
@@ -410,7 +420,7 @@ def cmd_prepare(args: argparse.Namespace) -> None:
             and confirm("Edit CHANGELOG.md before committing?", False)
         ):
             subprocess.run([*shlex.split(editor), str(CHANGELOG)], check=True)
-            notes = release_notes(CHANGELOG.read_text(), version)
+            notes = release_notes(CHANGELOG.read_text(encoding="utf-8"), version)
         if not confirm(f"Commit and tag {tag}?", args.yes):
             raise ReleaseError("stopped before committing")
         git("add", *relative)
@@ -420,7 +430,7 @@ def cmd_prepare(args: argparse.Namespace) -> None:
             if original is None:
                 path.unlink(missing_ok=True)
             else:
-                path.write_text(original)
+                path.write_text(original, encoding="utf-8")
         git("reset", "-q", "--", *relative, check=False)
         print("The version files were restored; nothing was committed.")
         raise
@@ -457,7 +467,7 @@ def pipelines_url(remote: str) -> str:
     Returns:
         A URL, or a short hint when the remote is not recognised.
     """
-    match = re.match(
+    match = re.prefixmatch(
         r"^(?:[a-z+]+://)?(?:[^@/]+@)?(?P<host>[^:/]+)(?::\d+)?"
         r"[:/](?P<path>.+?)(?:\.git)?/?$",
         remote.strip(),
@@ -486,11 +496,15 @@ def _emit_outputs(version: str) -> None:
 
 
 def cmd_notes(args: argparse.Namespace) -> None:
-    print(release_notes(CHANGELOG.read_text(), args.version.removeprefix("v")))
+    print(
+        release_notes(
+            CHANGELOG.read_text(encoding="utf-8"), args.version.removeprefix("v")
+        )
+    )
 
 
 def cmd_check_version(args: argparse.Namespace) -> None:
-    version = read_project(PYPROJECT.read_text()).version
+    version = read_project(PYPROJECT.read_text(encoding="utf-8")).version
     tag_version = args.tag.removeprefix("refs/tags/").removeprefix("v")
     if tag_version != version:
         raise ReleaseError(
@@ -501,7 +515,7 @@ def cmd_check_version(args: argparse.Namespace) -> None:
 
 
 def cmd_version(_args: argparse.Namespace) -> None:
-    version = read_project(PYPROJECT.read_text()).version
+    version = read_project(PYPROJECT.read_text(encoding="utf-8")).version
     print(version)
     _emit_outputs(version)
 

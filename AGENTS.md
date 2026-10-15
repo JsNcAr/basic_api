@@ -22,9 +22,12 @@ Poetry-managed.
   in the change that fixes it.
 * **Style**: no emojis or em-dashes in code or docs; do not guess APIs,
   versions, flags or package names, verify in code or docs.
-* **Typing**: `X | None`, never `Optional[X]`; generic classes use PEP 695
-  (`class Envelope[T](BaseModel)`); route dependencies are `Annotated`, via
-  the `SessionDep` and `CurrentUserDep` aliases in `dependencies.py`.
+* **Typing**: `X | None`, never `Optional[X]`; generic aliases come from
+  `collections.abc` (`AsyncGenerator[T]`, `Callable`), not `typing`; generic
+  classes use PEP 695 (`class Envelope[T](BaseModel)`); route dependencies
+  are `Annotated`, via the `SessionDep` and `CurrentUserDep` aliases in
+  `dependencies.py`. Read-only module constants that are mappings are
+  `frozendict` (Python 3.15); regexes use `prefixmatch`, not `match`.
 
 ## Project Structure
 ```

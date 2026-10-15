@@ -166,10 +166,10 @@ Everything a new project renames or changes, in one list:
    The starter itself stays at `0.1.0`.
 7. **Docs**: this folder and the README.
 
-## Debugging a hung process
+## Debugging a hung or slow process
 
-Python 3.14 can show what an asyncio program is waiting on, from outside the
-process and without stopping it:
+Python can show what an asyncio program is waiting on, from outside the
+process and without stopping it (3.14):
 
 ```bash
 python -m asyncio ps <pid>       # one line per task: id, name, coroutine stack
@@ -178,3 +178,20 @@ python -m asyncio pstree <pid>   # the same as an await tree
 
 Point it at the uvicorn worker's pid. A task stuck on a database call or a lock
 shows up with its full await chain; that is usually enough to name the culprit.
+
+Python 3.15 adds a sampling profiler, `profiling.sampling` (Tachyon). It reads
+the worker's memory from outside, so the worker pays nothing and need not be
+restarted; `--async-aware` reports stacks per task rather than event-loop
+internals:
+
+```bash
+python -m profiling.sampling dump --async-aware <pid>      # one snapshot of every task
+python -m profiling.sampling attach --async-aware -d 30 --flamegraph -o profile.html <pid>
+python -m profiling.sampling run --async-aware -d 30 -m uvicorn basic_api.main:app --app-dir src
+```
+
+All of these read another process's memory. On Linux the same user is not
+enough while `kernel.yama.ptrace_scope` is `1` (the usual default): run the
+profiler as root, give it `CAP_SYS_PTRACE` (`--cap-add=SYS_PTRACE` for a
+container), or set the scope to `0`. `run` starts the server as the profiler's
+own child and needs none of that, which makes it the way to profile locally.

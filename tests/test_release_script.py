@@ -237,7 +237,12 @@ def test_release_notes_needs_the_section():
 
 def _git(cwd, *args):
     return subprocess.run(
-        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True
+        ["git", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
     ).stdout.strip()
 
 
@@ -250,8 +255,8 @@ def repo(tmp_path, monkeypatch):
     _git(tmp_path, "clone", "-q", str(remote), str(work))
     _git(work, "config", "user.email", "t@example.com")
     _git(work, "config", "user.name", "Test")
-    (work / "pyproject.toml").write_text(PYPROJECT)
-    (work / "CHANGELOG.md").write_text(CHANGELOG)
+    (work / "pyproject.toml").write_text(PYPROJECT, encoding="utf-8")
+    (work / "CHANGELOG.md").write_text(CHANGELOG, encoding="utf-8")
     _git(work, "add", ".")
     _git(work, "commit", "-q", "-m", "feat: first")
     _git(work, "push", "-q", "-u", "origin", "main")
@@ -267,13 +272,18 @@ def test_prepare_commits_tags_and_leaves_unreleased_empty(repo, capsys):
     assert release.main(["prepare", "minor", "--skip-tests", "--no-push", "--yes"]) == 0
 
     assert (
-        release.read_project((repo / "pyproject.toml").read_text()).version == "0.2.0"
+        release.read_project(
+            (repo / "pyproject.toml").read_text(encoding="utf-8")
+        ).version
+        == "0.2.0"
     )
     assert _git(repo, "log", "-1", "--format=%s") == "chore(release): v0.2.0"
     assert _git(repo, "status", "--porcelain") == ""
     tag_message = _git(repo, "tag", "-l", "--format=%(contents)", "v0.2.0")
     assert tag_message.startswith("v0.2.0\n\n### Added\n- A thing (#3).")
-    _head, body, _rest = release.split_unreleased((repo / "CHANGELOG.md").read_text())
+    _head, body, _rest = release.split_unreleased(
+        (repo / "CHANGELOG.md").read_text(encoding="utf-8")
+    )
     assert body == ""
     assert "Not pushed" in capsys.readouterr().out
     assert _git(repo, "ls-remote", "--tags", "origin") == ""  # --no-push kept it local
@@ -297,7 +307,7 @@ def test_prepare_dry_run_changes_nothing(repo, capsys):
 
 
 def test_prepare_refuses_in_the_starter(repo, capsys):
-    (repo / "pyproject.toml").write_text(PYPROJECT + STARTER_TABLE)
+    (repo / "pyproject.toml").write_text(PYPROJECT + STARTER_TABLE, encoding="utf-8")
     _git(repo, "commit", "-q", "-am", "chore: mark as starter")
     _git(repo, "push", "-q")
     assert release.main(["prepare", "minor", "--skip-tests", "--no-push", "--yes"]) == 1
@@ -305,7 +315,10 @@ def test_prepare_refuses_in_the_starter(repo, capsys):
     assert _git(repo, "status", "--porcelain") == ""
     assert _git(repo, "tag") == ""
     assert (
-        release.read_project((repo / "pyproject.toml").read_text()).version == "0.1.0"
+        release.read_project(
+            (repo / "pyproject.toml").read_text(encoding="utf-8")
+        ).version
+        == "0.1.0"
     )
 
 
@@ -315,7 +328,7 @@ def test_prepare_refuses_off_main_dirty_or_behind(repo, capsys):
     assert "cut from main" in capsys.readouterr().err
     _git(repo, "switch", "-q", "main")
 
-    (repo / "scratch.txt").write_text("x")
+    (repo / "scratch.txt").write_text("x", encoding="utf-8")
     assert release.main(["prepare", "minor", "--skip-tests", "--no-push", "--yes"]) == 1
     assert "uncommitted" in capsys.readouterr().err
     (repo / "scratch.txt").unlink()
@@ -324,7 +337,7 @@ def test_prepare_refuses_off_main_dirty_or_behind(repo, capsys):
     _git(repo.parent, "clone", "-q", str(repo.parent / "remote.git"), str(other))
     _git(other, "config", "user.email", "t@example.com")
     _git(other, "config", "user.name", "Test")
-    (other / "note.txt").write_text("y")
+    (other / "note.txt").write_text("y", encoding="utf-8")
     _git(other, "add", ".")
     _git(other, "commit", "-q", "-m", "docs: a note")
     _git(other, "push", "-q")
